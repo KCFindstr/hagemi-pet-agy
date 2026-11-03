@@ -1,0 +1,19 @@
+{
+  "name": "hagemi-pet-agy",
+  "version": "0.1.0",
+  "description": "A chibi Gemini catgirl desktop pet for the Antigravity app: reacts to your agents, quota and the time of day.",
+  "type": "module",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "KCFindstr",
+  "repository": { "type": "git", "url": "https://github.com/KCFindstr/hagemi-pet-agy.git" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "preview": "node tools/preview.mjs",
+    "dev": "node tools/dev.mjs",
+    "install:local": "node tools/install-local.mjs",
+    "uninstall:local": "node tools/install-local.mjs --uninstall",
+    "build:rig": "python tools/build_rig.py"
+  }
+}

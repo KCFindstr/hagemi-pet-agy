@@ -1,0 +1,20 @@
+# Dependencies and local data
+node_modules/
+.dev-data/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local tool settings
+.claude/

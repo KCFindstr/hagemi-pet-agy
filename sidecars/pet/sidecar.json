@@ -1,0 +1,7 @@
+{
+  "description": "Hagemi the chibi catgirl: floats in your window, reacts to your agents, quota and the time of day.",
+  "display_name": "Hagemi Pet",
+  "command": "node",
+  "args": ["main.mjs"],
+  "restart_policy": "always"
+}
