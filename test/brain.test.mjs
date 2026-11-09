@@ -41,9 +41,9 @@ test('a salient moment gets a model comment with the chosen model', async () => 
   assert.equal(modelCalls(calls)[0].body.model, 'MODEL_LOW', 'defaults to Gemini 3.8 Flash (Low)');
 });
 
-test('ordinary moments never spend tokens', async () => {
+test('small moments never spend tokens', async () => {
   const { brain, calls, said } = harness();
-  await brain.consider('turn_done', context);
+  await brain.consider('turn_canceled', context);
   assert.equal(modelCalls(calls).length, 0);
   assert.equal(said[0].ai, false);
 });
@@ -63,7 +63,7 @@ test('nobody watching, no tokens', async () => {
 });
 
 test('low quota stops the model, from the bucket or the model itself', async () => {
-  for (const options of [{ quotaLevel: 0.1 }, { modelQuota: 0.05 }]) {
+  for (const options of [{ quotaLevel: 0.04 }, { modelQuota: 0.03 }]) {
     const { brain, calls, said } = harness(options);
     await brain.consider('turn_done_big', context);
     assert.equal(modelCalls(calls).length, 0);
@@ -72,7 +72,7 @@ test('low quota stops the model, from the bucket or the model itself', async () 
 });
 
 test('the minimum interval spaces out model calls', async () => {
-  const { brain, calls, advance } = harness();
+  const { brain, calls, advance } = harness({ settings: { ai: { minIntervalMin: 10 } } });
   await brain.consider('turn_done_big', { ...context, title: 'one' });
   advance(3);
   await brain.consider('turn_done_big', { ...context, title: 'two' });
@@ -122,7 +122,7 @@ test('she does not talk over herself', async () => {
   const { brain, said, advance } = harness({ settings: { ai: { enabled: false } } });
   await brain.consider('turn_done', context);
   advance(0.5);
-  await brain.consider('subagent_done', context);
+  await brain.consider('subagent_start', context);
   assert.equal(said.length, 1, 'inside the bubble gap');
   await brain.consider('quota_critical', { vars: { left: '5%' } });
   assert.equal(said.length, 2, 'urgent moments go through');

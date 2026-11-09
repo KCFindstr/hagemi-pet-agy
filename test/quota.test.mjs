@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bucketsForModel, formatDuration, isResetSoon, moodFor, parseQuota, quotaEvents, summarize } from '../sidecars/pet/lib/quota.mjs';
+import { bucketsForModel, formatDuration, isResetSoon, levelForModel, moodFor, parseQuota, quotaEvents, quotaRows, summarize } from '../sidecars/pet/lib/quota.mjs';
 
 const NOW = Date.parse('2026-11-03T08:00:00Z');
 const inMinutes = minutes => new Date(NOW + minutes * 60000).toISOString();
@@ -30,6 +30,23 @@ test('a model only draws from its own family of buckets', () => {
   assert.deepEqual(bucketsForModel(buckets, 'Gemini 4 Argon (Medium)').map(b => b.id), ['gemini-argon-wtu-weekly']);
 });
 
+test('a model is only limited by its own buckets', () => {
+  // Claude and GPT nearly empty, as in the fixture: Flash comments are unaffected, and vice versa.
+  const buckets = parseQuota(response(0.9, 0.8), NOW);
+  assert.equal(levelForModel(buckets, 'Claude Opus 5.5 (Medium)'), 0.05);
+  assert.equal(levelForModel(buckets, 'Gemini 3.8 Flash (Low)'), 0.8);
+  assert.equal(levelForModel([], 'Gemini 3.8 Flash (Low)'), null);
+});
+
+test('status rows say whose quota they show', () => {
+  const strings = { hud_5h: '5h fish', hud_weekly: 'Weekly fish' };
+  const rows = quotaRows(bucketsForModel(parseQuota(response(), NOW), 'Claude Opus 5.5 (Medium)'), strings, 'en', NOW);
+  assert.deepEqual(rows, [
+    { label: 'Claude and GPT models', value: '' },
+    { label: '5h fish', level: 0.05, value: '5% · 1h' },
+  ]);
+});
+
 test('the lowest bucket decides her mood', () => {
   const summary = summarize(parseQuota(response(0.2, 0.8), NOW), 'Gemini 3.8 Flash', {}, NOW);
   assert.equal(summary.level, 0.2);
@@ -56,14 +73,14 @@ test('falling through a threshold is an event, staying below is not', () => {
   assert.deepEqual(types(sum(0.05), sum(0)), ['quota_empty']);
 });
 
-test('the jar refilling is noticed', () => {
+test('the bowl refilling is noticed', () => {
   const [event] = quotaEvents(sum(0.05), sum(1));
   assert.equal(event.type, 'quota_refilled');
   assert.equal(event.wasEmpty, true);
   assert.deepEqual(types(sum(0.5), sum(0.55)), [], 'small drifts are not a refill');
 });
 
-test('a reset coming up only matters when she is short on honey', () => {
+test('a reset coming up only matters when she is short on fish', () => {
   assert.deepEqual(types(sum(0.3, 60), sum(0.3, 15)), ['reset_soon']);
   assert.deepEqual(types(sum(0.3, 15), sum(0.3, 14)), []);
   assert.deepEqual(types(sum(0.9, 60), sum(0.9, 15)), []);

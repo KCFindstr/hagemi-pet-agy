@@ -34,6 +34,8 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0, 0, 0, 0);
   gl.uniform1i(uniforms.tex, 0);
+  // Bitmaps are decoded premultiplied and ignore this; the composited body canvas needs it.
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
   function makeTexture(bitmap) {
     const texture = gl.createTexture();
@@ -77,7 +79,91 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
     return STAGE.cx - mid;
   }
 
-  function buildPose(name, bitmap, blinkBitmap, info) {
+  // The tail is its own layer, cut along its ink, so swishing it cannot drag the hair beside it.
+  // The body texture has the tail and any white pockets around it removed, with a thin seam under
+  // the tail so the join stays invisible at rest.
+  function bodyTexture(bitmap, cutBitmap, underBitmap, rect) {
+    if (!cutBitmap) return makeTexture(bitmap);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.drawImage(cutBitmap, rect[0], rect[1]);
+    ctx.globalCompositeOperation = 'source-over';
+    if (underBitmap) ctx.drawImage(underBitmap, rect[0], rect[1]);
+    return makeTexture(canvas);
+  }
+
+  function makeTailLayer(bitmap, info, root) {
+    const [x0, y0, w, h] = info.tailRect, step = 6, cols = Math.ceil(w / step) + 1, rows = Math.ceil(h / step) + 1;
+    const alpha = alphaGrid(bitmap);
+    const used = new Int32Array(cols * rows).fill(-1), points = [], indices = [], edges = [];
+    const vertex = (c, r) => {
+      const key = r * cols + c;
+      if (used[key] < 0) {
+        used[key] = points.length / 2;
+        points.push(Math.min(c * step, w), Math.min(r * step, h));
+      }
+      return used[key];
+    };
+    for (let r = 0; r < rows - 1; r++) for (let c = 0; c < cols - 1; c++) {
+      let visible = false;
+      for (let py = r * step - 2; py <= (r + 1) * step + 2 && !visible; py += 3) for (let px = c * step - 2; px <= (c + 1) * step + 2; px += 3) if (alphaAt(alpha, px, py) > 0) { visible = true; break; }
+      if (!visible) continue;
+      const a = vertex(c, r), b = vertex(c + 1, r), d = vertex(c, r + 1), e = vertex(c + 1, r + 1);
+      indices.push(a, b, d, b, e, d);
+      edges.push([a, b], [a, d], [b, e], [d, e]);
+    }
+    const n = points.length / 2;
+    if (!n) return null;
+    const rest = new Float32Array(n * 2), uvs = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) {
+      rest[i * 2] = points[i * 2] + x0; rest[i * 2 + 1] = points[i * 2 + 1] + y0;
+      uvs[i * 2] = points[i * 2] / w; uvs[i * 2 + 1] = points[i * 2 + 1] / h;
+    }
+    // Distance along the tail, walked over the mesh from the root: a curled tail stays continuous
+    // here, where straight-line distance would tear it where it passes close to itself.
+    let start = 0, best = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = Math.hypot(rest[i * 2] - root[0], rest[i * 2 + 1] - root[1]);
+      if (d < best) { best = d; start = i; }
+    }
+    const links = Array.from({ length: n }, () => []);
+    for (const [a, b] of edges) { links[a].push(b); links[b].push(a); }
+    const walked = new Float32Array(n).fill(Infinity), queue = [start];
+    walked[start] = 0;
+    for (let head = 0; head < queue.length; head++) {
+      const i = queue[head];
+      for (const j of links[i]) {
+        if (walked[j] === Infinity) { walked[j] = walked[i] + step; queue.push(j); }
+      }
+    }
+    let longest = 1;
+    for (let i = 0; i < n; i++) if (walked[i] !== Infinity && walked[i] > longest) longest = walked[i];
+    const along = new Float32Array(n);
+    for (let i = 0; i < n; i++) along[i] = walked[i] === Infinity ? 1 : walked[i] / longest;
+
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, rest.byteLength, gl.DYNAMIC_DRAW);
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.enableVertexAttribArray(attribs.position);
+    gl.vertexAttribPointer(attribs.position, 2, gl.FLOAT, false, 0, 0);
+    const uvBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(attribs.uv);
+    gl.vertexAttribPointer(attribs.uv, 2, gl.FLOAT, false, 0, 0);
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    return { vao, uvBuffer, indexBuffer, positionBuffer, count: indices.length, rest, pos: new Float32Array(n * 2), n, along, root: [rest[start * 2], rest[start * 2 + 1]], texture: makeTexture(bitmap) };
+  }
+
+  function buildPose(name, bitmap, blinkBitmap, tailBitmap, underBitmap, cutBitmap, info) {
     const width = bitmap.width, height = bitmap.height, offsetX = offsetFor(name, info), alpha = alphaGrid(bitmap);
     const cols = Math.ceil(width / CELL) + 1, rows = Math.ceil(height / CELL) + 1;
     const used = new Int32Array(cols * rows).fill(-1), restList = [], cellIndices = [];
@@ -135,7 +221,8 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
 
     const L = landmarksFor(info, width, height);
     const W = bindWeights(rest, n, L);
-    return { name, width, height, offsetX, alpha, rest, pos: new Float32Array(n * 2), n, positionBuffer, body, blink, texture: makeTexture(bitmap), L, W, uploadedFor: -1 };
+    const tail = tailBitmap && info.tail ? makeTailLayer(tailBitmap, info, info.tail[0]) : null;
+    return { name, width, height, offsetX, alpha, rest, pos: new Float32Array(n * 2), n, positionBuffer, body, blink, tail, texture: bodyTexture(bitmap, tail && cutBitmap, underBitmap, info.tailRect), L, W };
   }
 
   // Everything else about her is measured from the eyes.
@@ -151,7 +238,7 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
 
   function bindWeights(rest, n, L) {
     const channel = () => new Float32Array(n);
-    const W = { head: channel(), face: channel(), back: channel(), earL: channel(), earR: channel(), ahoge: channel(), hairL: channel(), hairR: channel(), skirt: channel(), legL: channel(), legR: channel(), chest: channel(), spine: channel(), tail: channel(), tailU: channel() };
+    const W = { head: channel(), face: channel(), back: channel(), earL: channel(), earR: channel(), ahoge: channel(), hairL: channel(), hairR: channel(), skirt: channel(), legL: channel(), legR: channel(), chest: channel(), spine: channel() };
     const { mx, my, gap, neck, crown } = L;
     const earPivot = tip => (tip ? [tip[0] + (crown[0] - tip[0]) * 0.44, tip[1] + (crown[1] - tip[1]) * 0.44] : null);
     L.earPivotL = earPivot(L.earL);
@@ -162,11 +249,6 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       const qx = x - px, qy = y - py, t = (qx * ax + qy * ay) / len, perp = Math.abs(qx * -ay + qy * ax);
       return smooth(near, far, t) * smooth(half * 1.35, half, perp);
     };
-    let tailLengths = null, tailTotal = 0;
-    if (L.tail) {
-      tailLengths = [Math.hypot(L.tail[1][0] - L.tail[0][0], L.tail[1][1] - L.tail[0][1]), Math.hypot(L.tail[2][0] - L.tail[1][0], L.tail[2][1] - L.tail[1][1])];
-      tailTotal = tailLengths[0] + tailLengths[1];
-    }
     for (let i = 0; i < n; i++) {
       const x = rest[i * 2], y = rest[i * 2 + 1];
       W.head[i] = 1 - smooth(neck[1] - 22, neck[1] + 23 + 0.22 * Math.abs(x - neck[0]), y);
@@ -184,19 +266,6 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       W.legR[i] = x >= mx ? legs : 0;
       W.chest[i] = gauss(x, y, mx, neck[1] + 65, gap * 0.8, gap * 0.52);
       W.spine[i] = smooth(495, 360, y);
-      if (L.tail) {
-        // Distance along and from the tail's three-point centerline.
-        const [p0, p1, p2] = L.tail;
-        let best = Infinity, along = 0;
-        for (const [a, b, start, length] of [[p0, p1, 0, tailLengths[0]], [p1, p2, tailLengths[0], tailLengths[1]]]) {
-          const dx = b[0] - a[0], dy = b[1] - a[1], u = clamp(((x - a[0]) * dx + (y - a[1]) * dy) / (length * length || 1), 0, 1);
-          const d = Math.hypot(x - (a[0] + dx * u), y - (a[1] + dy * u));
-          if (d < best) { best = d; along = (start + length * u) / tailTotal; }
-        }
-        const radius = Math.max(48, tailTotal * 0.3);
-        W.tail[i] = smooth(radius * 1.35, radius * 0.8, best) * smooth(0, 0.22, along);
-        W.tailU[i] = along;
-      }
     }
     return W;
   }
@@ -211,7 +280,6 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
   function deform(pose, P, t) {
     const { rest, pos, n, W, L, height, offsetX } = pose, q = { x: 0, y: 0 };
     const liftFar = P.hairLift * 15, spreadFar = P.hairLift * 9, { neck, mx } = L;
-    const tail0 = L.tail && L.tail[0];
     for (let i = 0; i < n; i++) {
       q.x = rest[i * 2]; q.y = rest[i * 2 + 1];
       const hl = W.hairL[i], hr = W.hairR[i];
@@ -226,11 +294,6 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       if (W.earL[i]) rotateAround(q, L.earPivotL[0], L.earPivotL[1], P.earL * W.earL[i]);
       if (W.earR[i]) rotateAround(q, L.earPivotR[0], L.earPivotR[1], P.earR * W.earR[i]);
       if (W.ahoge[i]) rotateAround(q, L.ahogeRoot[0], L.ahogeRoot[1], P.ahoge * W.ahoge[i]);
-      if (W.tail[i]) {
-        // The swish starts at the root and whips out to the tip.
-        const u = W.tailU[i], wave = P.tailAmp * Math.sin(t * P.tailFreq * 6.283 - u * 3.2);
-        rotateAround(q, tail0[0], tail0[1], (wave + P.tailBase + P.tailSpring) * W.tail[i] * (0.3 + u * 0.7));
-      }
       if (W.skirt[i]) { q.x += W.skirt[i] * P.skirt; q.y -= W.skirt[i] * P.hairLift * 3; }
       if (W.legL[i]) q.x += W.legL[i] * P.kick * Math.sin(t * 5.5);
       if (W.legR[i]) q.x += W.legR[i] * P.kick * Math.sin(t * 5.5 + Math.PI);
@@ -250,6 +313,24 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       pos[i * 2 + 1] = q.y;
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, pose.positionBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, pos);
+  }
+
+  // The swish starts at the root and whips out to the tip, so the seam at the body never opens.
+  function deformTail(pose, P) {
+    const { tail, L, height, offsetX } = pose, { rest, pos, n, along, root } = tail, q = { x: 0, y: 0 };
+    const followX = smooth(430, 515, root[1]) * smooth(575, 530, root[1]) * P.skirt;
+    for (let i = 0; i < n; i++) {
+      q.x = rest[i * 2]; q.y = rest[i * 2 + 1];
+      const u = along[i], wave = P.tailAmp * Math.sin(P.tailPhase - u * 3.2);
+      rotateAround(q, root[0], root[1], (wave * 0.72 + P.tailBase + P.tailSpring) * u * (0.35 + u * 0.65));
+      q.x += followX;
+      q.x = L.mx + (q.x - L.mx) * (1 - P.squash * 0.55);
+      q.y = height + (q.y - height) * (1 + P.squash);
+      pos[i * 2] = q.x + offsetX;
+      pos[i * 2 + 1] = q.y;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, tail.positionBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, pos);
   }
 
@@ -285,6 +366,13 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       gl.deleteVertexArray(mesh.vao);
     }
     if (pose.blink) gl.deleteTexture(pose.blink.texture);
+    if (pose.tail) {
+      gl.deleteTexture(pose.tail.texture);
+      gl.deleteBuffer(pose.tail.positionBuffer);
+      gl.deleteBuffer(pose.tail.uvBuffer);
+      gl.deleteBuffer(pose.tail.indexBuffer);
+      gl.deleteVertexArray(pose.tail.vao);
+    }
   }
 
   return {
@@ -301,12 +389,16 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
       const opacity = P.opacity;
       if (previous && fade < 1) {
         deform(previous, P, t);
-        drawMesh(previous.body, previous.texture, opacity * clamp((1 - fade) * 2.2, 0, 1));
+        const fading = opacity * clamp((1 - fade) * 2.2, 0, 1);
+        drawMesh(previous.body, previous.texture, fading);
+        if (previous.tail) { deformTail(previous, P); drawMesh(previous.tail, previous.tail.texture, fading); }
       }
       if (current) {
         deform(current, P, t);
-        drawMesh(current.body, current.texture, opacity * clamp(fade * 1.8, 0, 1));
+        const showing = opacity * clamp(fade * 1.8, 0, 1);
+        drawMesh(current.body, current.texture, showing);
         if (current.blink && fade >= 1) drawMesh(current.blink, current.blink.texture, opacity * blink);
+        if (current.tail) { deformTail(current, P); drawMesh(current.tail, current.tail.texture, showing); }
       }
     },
     // Is this art-space point on her? For click-through in the empty parts of her box.

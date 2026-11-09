@@ -23,10 +23,10 @@ HAGEMI.STATES = {
   busy: { pose: ['busy_left', 'busy_right'], swap: 3.6, tailAmp: 0.26, tailFreq: 1.4, float: 0.15 },
   swamped: { pose: ['swamped_left', 'swamped_right'], swap: 1.5, tailAmp: 0.44, tailFreq: 2.1, wobble: 0.04, float: 0.1 },
   tired: { pose: 'tired', hairLift: 0, tailAmp: 0.05, tailFreq: 0.28, float: 0.05, ahoge: 0.26, earL: 0.1, earR: -0.1, breath: 0.8 },
-  exhausted: { pose: 'tired', rot: 0.2, hairLift: 0.5, hairWave: 1.2, tailBase: 0.2, tailAmp: 0.02, tailFreq: 0.16, float: 0.75, ahoge: 0.6, earL: 0.22, earR: -0.22, jar: true, breath: 0.5 },
-  resetSoon: { pose: 'forgiven', tailAmp: 0.36, tailFreq: 1.5, float: 0.45, bounce: 4, bounceRate: 2.2, jar: true },
+  exhausted: { pose: 'tired', rot: 0.2, hairLift: 0.5, hairWave: 1.2, tailBase: 0.2, tailAmp: 0.02, tailFreq: 0.16, float: 0.75, ahoge: 0.6, earL: 0.22, earR: -0.22, stash: true, breath: 0.5 },
+  resetSoon: { pose: 'forgiven', tailAmp: 0.36, tailFreq: 1.5, float: 0.45, bounce: 4, bounceRate: 2.2, stash: true },
   sleeping: { pose: 'sleeping', float: 0.8, hairWave: 1.3, tailAmp: 0.04, tailFreq: 0.14, breath: 2.1, sleeping: true, rot: 0.03, noBlink: true },
-  dragged: { pose: 'surprised', kick: 5, hairWave: 3, tailAmp: 0.42, tailFreq: 2.2, float: 0, noFidget: true },
+  dragged: { pose: 'surprised', kick: 5, hairWave: 3, tailAmp: 0.22, tailFreq: 1.1, float: 0, noFidget: true },
   dizzy: { pose: 'dizzy', wobble: 0.12, float: 0.1, tailAmp: 0.2, tailFreq: 1 },
   petted: { pose: 'pat', tailAmp: 0.3, tailFreq: 0.6, float: 0.4, nodRate: 1.1, nodSize: 2.2, earL: 0.1, earR: -0.1 },
   coaxed: { pose: 'coaxed', tailAmp: 0.24, tailFreq: 0.7, float: 0.35 },
@@ -77,10 +77,10 @@ const GESTURES = {
   gasp: { ms: 540, run(p, a) { const e = hump(p); a.squash += 0.07 * e; a.shiftY -= 22 * e; a.ahoge -= 0.22 * e; a.tailSpring -= 0.3 * e; } },
   recoil: { ms: 520, run(p, a) { const e = hump(p); a.shiftX -= 18 * e; a.lean -= 0.06 * e; a.head -= 0.08 * e; } },
   squish: { ms: 460, run(p, a) { a.squash -= 0.09 * hump(p); } },
-  pop: { ms: 300, run(p, a) { a.squash += 0.035 * Math.sin(p * Math.PI * 2) * (1 - p); } },
+  pop: { ms: 300, soft: true, run(p, a) { a.squash += 0.035 * Math.sin(p * Math.PI * 2) * (1 - p); } },
   drift: { ms: 5200, run(p, a) { const e = hump(p); a.shiftY -= 38 * e; a.hairLift += 0.85 * e; a.kick += 2.6 * e; a.rot += Math.sin(p * Math.PI * 2) * 0.07; a.tailBase -= 0.1 * e; } },
   flop: { ms: 900, run(p, a) { const e = hump(p); a.squash -= 0.07 * e; a.ahoge += 0.45 * e; a.head += 0.08 * e; } },
-  talk: { ms: 340, run(p, a) { a.nod += 2.2 * hump(p); a.squash += 0.008 * hump(p); } },
+  talk: { ms: 340, soft: true, run(p, a) { a.nod += 2.2 * hump(p); a.squash += 0.008 * hump(p); } },
   leave: { ms: 1300, run(p, a) { a.opacity -= Math.max(0, p - 0.5) * 2; a.shiftY -= p * p * 70; a.hairLift += p; } },
 };
 
@@ -89,9 +89,12 @@ HAGEMI.createAnimator = function createAnimator(fx) {
   const P = { ...HAGEMI.REST }, target = { ...HAGEMI.REST };
   const zero = Object.fromEntries(Object.keys(HAGEMI.REST).map(key => [key, 0]));
   let state = 'idle', overrideState = null, overrideUntil = 0, overrideThen = null;
-  let mood = { quota: 'ok', late: false, jarLevel: null, jarLabel: '', subagents: 0, showJar: false };
+  let mood = { quota: 'ok', late: false, stashLevel: null, stashLabel: '', subagents: 0, showStash: false };
   let gestures = [];
   let poseIndex = 0, poseClock = 0, lastPoseState = null;
+  // Accumulated, never computed as time * frequency: with that, easing the frequency after a state
+  // change sweeps the phase at a rate proportional to her uptime, which reads as violent shaking.
+  let tailPhase = 0;
   let blink = 0, blinkStage = 0, blinkClock = 0, nextBlink = rand(1.5, 4), doubleBlink = false;
   let nextFidget = rand(9, 18), reducedMotion = false, talking = false, talkClock = 0;
   const springs = { hairL: [0, 0], hairR: [0, 0], ahoge: [0, 0], tail: [0, 0], skirt: [0, 0] };
@@ -102,6 +105,8 @@ HAGEMI.createAnimator = function createAnimator(fx) {
     if (!gesture || (reducedMotion && gesture.noMotion)) return;
     gestures = gestures.filter(g => g.name !== name);
     gestures.push({ name, run: gesture.run, ms: gesture.ms, born: performance.now() });
+    // Big movements jostle her. Talking and pose changes must not, or the tail twitches through them.
+    if (gesture.soft) return;
     springs.tail[1] += rand(-0.6, 0.6);
     springs.ahoge[1] += rand(-1.6, 1.6);
   }
@@ -171,7 +176,7 @@ HAGEMI.createAnimator = function createAnimator(fx) {
     if (S.wobble) { target.rot += Math.sin(t * 5.5) * S.wobble; target.head += Math.sin(t * 7) * S.wobble * 0.6; }
     if (S.shake) target.shiftX = Math.sin(t * 64) * S.shake;
 
-    // Being low on honey sags whatever she is doing, more so at rest.
+    // Being low on dried fish sags whatever she is doing, more so at rest.
     const resting = activeName === 'idle';
     const sag = mood.quota === 'critical' ? 1 : mood.quota === 'low' ? 0.5 : 0;
     if (sag && activeName !== 'exhausted' && !S.docked) {
@@ -201,7 +206,7 @@ HAGEMI.createAnimator = function createAnimator(fx) {
     const hairL = stepSpring(springs.hairL, -vx * 0.017, 60, 7, dt);
     const hairR = stepSpring(springs.hairR, -vx * 0.02, 52, 6, dt);
     const ahoge = stepSpring(springs.ahoge, -vx * 0.00032 + vy * 0.0002, 120, 8, dt);
-    const tail = stepSpring(springs.tail, vx * 0.00048 + vy * 0.00016, 34, 4.2, dt);
+    const tail = stepSpring(springs.tail, vx * 0.00048 + vy * 0.00016, 30, 7.5, dt);
     const skirt = stepSpring(springs.skirt, -vx * 0.006, 80, 7, dt);
 
     const output = {};
@@ -210,6 +215,8 @@ HAGEMI.createAnimator = function createAnimator(fx) {
     output.hairSwayR = hairR;
     output.ahoge += ahoge + Math.sin(t * 2.3) * 0.016;
     output.tailSpring += tail;
+    tailPhase = (tailPhase + dt * Math.max(0, output.tailFreq) * 6.283) % 6.283;
+    output.tailPhase = tailPhase;
     output.skirt = skirt + Math.sin(t * 1.15) * 0.9;
     output.lean = clamp(output.lean + vx * 0.00002, -0.28, 0.28);
     output.rot += clamp(vx * 0.00004, -0.34, 0.34);
@@ -240,8 +247,8 @@ HAGEMI.createAnimator = function createAnimator(fx) {
       if (nextFidget <= 0) fidget();
     }
 
-    const showJar = (S.jar || mood.showJar || mood.quota === 'low' || mood.quota === 'critical') && !S.docked;
-    fx.setJar(showJar && mood.jarLevel != null ? { level: mood.jarLevel, label: mood.jarLabel } : null);
+    const showStash = (S.stash || mood.showStash || mood.quota === 'low' || mood.quota === 'critical') && !S.docked;
+    fx.setStash(showStash && mood.stashLevel != null ? { level: mood.stashLevel, label: mood.stashLabel } : null);
     fx.setClones(activeName === 'exhausted' || activeName === 'sleeping' || S.docked ? 0 : mood.subagents);
 
     return { P: output, poseName, activeName, blink, sleeping: !!S.sleeping };

@@ -17,17 +17,21 @@ export function profileDirectory({ platform = process.platform, env = process.en
   return join(env.XDG_CONFIG_HOME || join(home, '.config'), 'Antigravity');
 }
 
-// Only the app's main window: a top-level page served from its loopback origin. Agent browser
-// tabs and plugin iframes never qualify.
+// Candidates for the app's main window: top-level pages on loopback, at any route, since the app
+// is a single-page client whose path changes as you navigate. Plugin iframes never qualify.
+// Local dev servers can look the same from here, so APP_DOCUMENT confirms it from inside the page.
 export function isAppWindow(target, port) {
   try {
     const page = new URL(target.url), socket = new URL(target.webSocketDebuggerUrl);
     return target.type === 'page' && ['http:', 'https:'].includes(page.protocol) && LOOPBACK.has(page.hostname)
-      && page.pathname === '/' && socket.protocol === 'ws:' && LOOPBACK.has(socket.hostname) && Number(socket.port) === port;
+      && socket.protocol === 'ws:' && LOOPBACK.has(socket.hostname) && Number(socket.port) === port;
   } catch {
     return false;
   }
 }
+
+// Only the app's own page has this config and bundle. Reads a boolean and nothing else.
+const APP_DOCUMENT = `!!(window.__APP_CONFIG__ && document.querySelector('script[src="/main.js"]'))`;
 
 class Session {
   constructor(url, onEvent, onClose) {
@@ -98,6 +102,8 @@ export class RendererBridge {
       if (this.sessions.get(s.url) === s) this.sessions.delete(s.url);
     });
     await session.open();
+    const check = await session.command('Runtime.evaluate', { expression: APP_DOCUMENT, returnByValue: true });
+    if (check.result?.value !== true) { session.close(); return null; }
     session.origin = new URL(target.url).origin;
     await session.command('Page.enable');
     await session.command('Runtime.enable');
@@ -165,7 +171,7 @@ export class RendererBridge {
         const session = this.sessions.get(target.webSocketDebuggerUrl);
         if (session) continue;
         const attached = await this.attach(target);
-        this.sessions.set(target.webSocketDebuggerUrl, attached);
+        if (attached) this.sessions.set(target.webSocketDebuggerUrl, attached);
       }
       for (const session of this.sessions.values()) {
         if (session.closed) continue;

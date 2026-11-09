@@ -22,35 +22,35 @@ export function chooseState(facts, quota, { resetSoon = false, sleepAfterMs = 10
 // ai: worth spending tokens on. urgent: skips the bubble rate limit. cooldownMin: per trigger.
 export const REACTIONS = {
   turn_start: { salience: 0.12, cooldownMin: 4, react: { state: 'listening', ms: 1500, gesture: 'gasp' } },
-  turn_done: { salience: 0.32, cooldownMin: 3, react: { state: 'happy', ms: 2600, gesture: 'hop', burst: 'sparkles' } },
+  turn_done: { salience: 0.34, cooldownMin: 3, ai: true, react: { state: 'happy', ms: 2600, gesture: 'hop', burst: 'sparkles' } },
   turn_done_big: { salience: 0.72, cooldownMin: 2, ai: true, react: { state: 'proud', ms: 3800, gesture: 'spin', burst: 'confetti' } },
   turn_error: { salience: 0.78, cooldownMin: 2, ai: true, react: { state: 'oops', ms: 3600, gesture: 'shiver', burst: 'sweat' } },
   turn_canceled: { salience: 0.3, cooldownMin: 5, react: { state: 'oops', ms: 1800, gesture: 'recoil' } },
-  turn_maxed: { salience: 0.55, cooldownMin: 10, react: { state: 'oops', ms: 2600, gesture: 'flop' } },
+  turn_maxed: { salience: 0.55, cooldownMin: 10, ai: true, react: { state: 'oops', ms: 2600, gesture: 'flop' } },
   step_error: { salience: 0.2, cooldownMin: 6, react: { state: 'oops', ms: 1200, gesture: 'shiver' } },
   long_run: { salience: 0.5, cooldownMin: 25, ai: true, react: { gesture: 'lookAround' } },
   waiting: { salience: 0.62, cooldownMin: 3, urgent: true, react: { gesture: 'hop' } },
-  subagent_start: { salience: 0.42, cooldownMin: 8, react: { state: 'delegating', ms: 2400, gesture: 'hop', burst: 'sparkles' } },
+  subagent_start: { salience: 0.42, cooldownMin: 8, ai: true, react: { state: 'delegating', ms: 2400, gesture: 'hop', burst: 'sparkles' } },
   subagent_many: { salience: 0.62, cooldownMin: 12, ai: true, react: { state: 'proud', ms: 2600, gesture: 'bounce', burst: 'sparkles' } },
   subagent_done: { salience: 0.25, cooldownMin: 8, react: { gesture: 'nod' } },
-  busy: { salience: 0.32, cooldownMin: 20, react: { gesture: 'earFlick' } },
+  busy: { salience: 0.34, cooldownMin: 20, ai: true, react: { gesture: 'earFlick' } },
   swamped: { salience: 0.6, cooldownMin: 15, ai: true, react: { gesture: 'shiver', burst: 'sweat' } },
   context_big: { salience: 0.5, cooldownMin: 45, ai: true, react: { state: 'oops', ms: 2000, gesture: 'flop' } },
   compact: { salience: 0.25, cooldownMin: 15, react: { gesture: 'squish' } },
-  drawing: { salience: 0.45, cooldownMin: 15, react: { gesture: 'tailSwish', burst: 'sparkles' } },
+  drawing: { salience: 0.45, cooldownMin: 15, ai: true, react: { gesture: 'tailSwish', burst: 'sparkles' } },
   model_rival_claude: { salience: 0.55, cooldownMin: 180, ai: true, react: { state: 'puffed', ms: 3000, gesture: 'shake' } },
   model_rival_gpt: { salience: 0.55, cooldownMin: 180, ai: true, react: { state: 'puffed', ms: 3000, gesture: 'shake' } },
-  model_back: { salience: 0.5, cooldownMin: 60, react: { state: 'happy', ms: 2600, gesture: 'bounce', burst: 'hearts' } },
-  quota_low: { salience: 0.62, cooldownMin: 90, urgent: true, react: { state: 'tired', ms: 2800, gesture: 'flop' } },
+  model_back: { salience: 0.5, cooldownMin: 60, ai: true, react: { state: 'happy', ms: 2600, gesture: 'bounce', burst: 'hearts' } },
+  quota_low: { salience: 0.62, cooldownMin: 90, urgent: true, ai: true, react: { state: 'tired', ms: 2800, gesture: 'flop' } },
   quota_critical: { salience: 0.8, cooldownMin: 45, urgent: true, ai: true, react: { state: 'tired', ms: 3400, gesture: 'flop' } },
   quota_empty: { salience: 0.92, cooldownMin: 30, urgent: true, react: { state: 'exhausted', ms: 4000, gesture: 'flop' } },
   reset_soon: { salience: 0.6, cooldownMin: 60, ai: true, react: { state: 'resetSoon', ms: 3000, gesture: 'hop' } },
-  quota_refilled: { salience: 0.72, cooldownMin: 30, urgent: true, react: { state: 'gift', ms: 4200, gesture: 'bounce', burst: ['honey', 'confetti'] } },
+  quota_refilled: { salience: 0.72, cooldownMin: 30, urgent: true, ai: true, react: { state: 'gift', ms: 4200, gesture: 'bounce', burst: ['fish', 'confetti'] } },
   late_night: { salience: 0.5, cooldownMin: 240, ai: true, react: { state: 'yawn', ms: 2600 } },
   long_session: { salience: 0.46, cooldownMin: 120, ai: true, react: { state: 'stretch', ms: 2800 } },
-  friday: { salience: 0.46, cooldownMin: 1440, react: { gesture: 'hop' } },
+  friday: { salience: 0.46, cooldownMin: 1440, ai: true, react: { gesture: 'hop' } },
   wake: { salience: 0.2, cooldownMin: 20, react: { state: 'yawn', ms: 2400 } },
-  idle_ponder: { salience: 0.36, cooldownMin: 40, ai: true, react: { gesture: 'lookAround' } },
+  idle_ponder: { salience: 0.36, cooldownMin: 25, ai: true, react: { gesture: 'lookAround' } },
   greet: { salience: 1, cooldownMin: 0, urgent: true, react: { gesture: 'hop', burst: 'sparkles' } },
   poke: { salience: 0.9, cooldownMin: 0.05, urgent: true },
   annoyed: { salience: 0.9, cooldownMin: 0.1, urgent: true },
@@ -65,8 +65,8 @@ export const REACTIONS = {
 
 export const CHATTINESS = {
   quiet: { gapSec: 300, floor: 0.6, aiFloor: 0.7 },
-  normal: { gapSec: 90, floor: 0.3, aiFloor: 0.5 },
-  chatty: { gapSec: 40, floor: 0.12, aiFloor: 0.36 },
+  normal: { gapSec: 60, floor: 0.3, aiFloor: 0.33 },
+  chatty: { gapSec: 30, floor: 0.12, aiFloor: 0.2 },
 };
 
 // Turns a finished turn into the moment it deserves.
@@ -124,6 +124,6 @@ export function ambientTriggers({ now, activeSinceMs, active, lastRemarkAgoMs, i
   if (active && isLate(date)) triggers.push('late_night');
   if (active && activeSinceMs >= 2 * HOUR) triggers.push('long_session');
   if (active && date.getDay() === 5 && date.getHours() >= 17) triggers.push('friday');
-  if (lastRemarkAgoMs >= 35 * MINUTE && idleMs < 10 * MINUTE) triggers.push('idle_ponder');
+  if (lastRemarkAgoMs >= 25 * MINUTE && idleMs < 10 * MINUTE) triggers.push('idle_ponder');
   return triggers;
 }

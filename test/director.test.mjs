@@ -18,7 +18,7 @@ test('what she does follows what the agents do', () => {
   assert.equal(chooseState(facts({ running: 1, subagents: 2 }), ok), 'delegating');
 });
 
-test('priority: empty jar beats everything, then waiting, then workload', () => {
+test('priority: an empty bowl beats everything, then waiting, then workload', () => {
   assert.equal(chooseState(facts({ running: 3, waiting: true }), { mood: 'empty' }), 'exhausted');
   assert.equal(chooseState(facts({ running: 3, waiting: true }), ok), 'asking');
   assert.equal(chooseState(facts({ running: 3, category: 'reading' }), ok), 'swamped');
@@ -77,7 +77,7 @@ test('ambient nudges', () => {
   assert.deepEqual(ambientTriggers({ now: late, active: false, activeSinceMs: 0, lastRemarkAgoMs: 0, idleMs: 0 }), []);
   const noon = new Date(2026, 10, 3, 12).getTime();
   assert.ok(ambientTriggers({ now: noon, active: true, activeSinceMs: 3 * 3600000, lastRemarkAgoMs: 0, idleMs: 0 }).includes('long_session'));
-  assert.ok(ambientTriggers({ now: noon, active: false, activeSinceMs: 0, lastRemarkAgoMs: 40 * 60000, idleMs: 0 }).includes('idle_ponder'));
+  assert.ok(ambientTriggers({ now: noon, active: false, activeSinceMs: 0, lastRemarkAgoMs: 30 * 60000, idleMs: 0 }).includes('idle_ponder'));
   assert.deepEqual(ambientTriggers({ now: noon, active: false, activeSinceMs: 0, lastRemarkAgoMs: 40 * 60000, idleMs: 20 * 60000 }), [], 'nobody home, nothing to say');
 });
 

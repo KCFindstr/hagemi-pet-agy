@@ -11,6 +11,36 @@ test('defaults match the promises in the README', () => {
   assert.equal(DEFAULTS.ai.enabled, true);
 });
 
+test('the default budget is generous: about 500 tokens a comment, 300 comments a day', () => {
+  assert.equal(DEFAULTS.ai.maxPerDay, 300);
+  assert.ok(DEFAULTS.ai.dailyTokenBudget >= DEFAULTS.ai.maxPerDay * 500);
+  assert.ok(DEFAULTS.ai.maxPerHour >= 60 / DEFAULTS.ai.minIntervalMin, 'the interval is what limits the rate, not the hourly cap');
+});
+
+test('old settings files pick up new defaults but keep real choices', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'hagemi-')), 'settings.json');
+  writeFileSync(file, JSON.stringify({ language: 'zhs', ai: { enabled: true, model: 'Gemini 3.8 Flash (Low)', minIntervalMin: 10, maxPerHour: 7, maxPerDay: 24, dailyTokenBudget: 12000, pauseBelowQuota: 0.15 } }));
+  const { value } = new SettingsStore(file);
+  assert.equal(value.language, 'zhs');
+  assert.equal(value.ai.maxPerHour, 7, 'a value the user changed stays');
+  assert.equal(value.ai.minIntervalMin, DEFAULTS.ai.minIntervalMin);
+  assert.equal(value.ai.maxPerDay, DEFAULTS.ai.maxPerDay);
+  assert.equal(value.ai.dailyTokenBudget, DEFAULTS.ai.dailyTokenBudget);
+  assert.equal(value.ai.pauseBelowQuota, DEFAULTS.ai.pauseBelowQuota);
+});
+
+test('only changes are saved, so later default improvements reach everyone', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'hagemi-')), 'settings.json');
+  new SettingsStore(file).patch({ language: 'zhs', ai: { maxPerHour: 9 } });
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { version: 2, language: 'zhs', ai: { maxPerHour: 9 } });
+  const reloaded = new SettingsStore(file);
+  assert.equal(reloaded.value.ai.maxPerHour, 9);
+  assert.equal(reloaded.value.ai.maxPerDay, DEFAULTS.ai.maxPerDay);
+  // Going back to a default forgets the override.
+  reloaded.patch({ ai: { maxPerHour: DEFAULTS.ai.maxPerHour } });
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { version: 2, language: 'zhs' });
+});
+
 test('junk input cannot break her', () => {
   const value = sanitize({ language: 'klingon', size: 99, ai: { maxPerDay: 'lots', minIntervalMin: -5, contextLevel: 'everything', model: 42 }, quota: { lowAt: 7 }, position: { x: 'a' } });
   assert.equal(value.language, 'auto');

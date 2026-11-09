@@ -29,7 +29,7 @@ ${body}
 }
 
 // Art is requested by name from the renderer, so the name is untrusted input.
-const ART_NAME = /^(?:blink\/)?[a-z0-9_-]{1,32}$/;
+const ART_NAME = /^(?:(?:blink|tail|under|cut)\/)?[a-z0-9_-]{1,32}$/;
 export function readArt(name) {
   if (typeof name !== 'string' || !ART_NAME.test(name)) return null;
   try {

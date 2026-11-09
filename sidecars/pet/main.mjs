@@ -1,15 +1,16 @@
 // Sidecar entry point: watches Antigravity, decides how she feels, and tells the pet.
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Brain, Budget, ModelResolver } from './lib/brain.mjs';
 import { RendererBridge } from './lib/cdp.mjs';
 import { ambientTriggers, chooseState, classifyTurnEnd, festival, isLate, modelFamily, REACTIONS, timeOfDay } from './lib/director.mjs';
 import { fill, resolveLanguage, UI } from './lib/lines.mjs';
 import { LanguageServer } from './lib/ls-client.mjs';
 import { Monitor } from './lib/monitor.mjs';
-import { formatDuration, isResetSoon, parseQuota, quotaEvents, summarize } from './lib/quota.mjs';
+import { formatDuration, isResetSoon, levelForModel, parseQuota, quotaEvents, quotaRows, summarize } from './lib/quota.mjs';
 import { readArt } from './lib/renderer-source.mjs';
 import { SettingsStore } from './lib/settings.mjs';
 
@@ -32,6 +33,7 @@ const models = new ModelResolver(ls);
 let appLanguage = 'en';
 let facts = { running: 0, subagents: 0, category: null, idleMs: 0, quietMs: 0, connected: false };
 let quota = { level: null, mood: 'ok', buckets: [], resetInMs: null };
+let allBuckets = [];
 let presence = { visible: true, focused: true, idleMs: 0 };
 let selectedModel = null;
 let activeSince = null, lastToolAt = 0;
@@ -47,7 +49,8 @@ const brain = new Brain({
   getSettings: () => settings.value,
   getLanguage: language,
   getPresence: () => presence,
-  getQuotaLevel: () => quota.level,
+  // Comments are paid for by their own model, not by the one selected for the agent.
+  getQuotaLevel: () => levelForModel(allBuckets, models.resolve(settings.value.ai.model)?.label || settings.value.ai.model),
   say: (result, trigger) => {
     bridge.broadcast({ t: 'say', text: result.text, mood: result.mood, ai: result.ai, force: trigger === 'greet' });
     if (process.env.HAGEMI_DEBUG) log(`${trigger}${result.ai ? ' (ai)' : ''}: ${result.text}`);
@@ -55,14 +58,8 @@ const brain = new Brain({
 });
 
 function hudRows() {
-  const strings = ui(), rows = [];
-  const percent = level => `${Math.round(level * 100)}%`;
-  for (const bucket of quota.buckets) {
-    const label = bucket.window === '5h' ? strings.hud_5h : bucket.window === 'weekly' ? strings.hud_weekly : bucket.group;
-    const reset = bucket.resetAt ? ` · ${formatDuration(bucket.resetAt - Date.now(), language())}` : '';
-    rows.push({ label, level: bucket.remaining, value: `${percent(bucket.remaining)}${reset}` });
-  }
-  rows.push({ label: strings.hud_agents, value: facts.running || facts.subagents ? fill(strings.hud_subagents, facts) : strings.hud_idle });
+  const strings = ui(), rows = quotaRows(quota.buckets, strings, language());
+  rows.push({ label: strings.hud_agents, value: facts.subagents ? fill(strings.hud_subagents, facts) : facts.running ? fill(strings.hud_running, facts) : strings.hud_idle });
   const usage = budget.usage;
   if (settings.value.ai.enabled) rows.push({ label: strings.hud_comments, value: `${usage.calls}/${settings.value.ai.maxPerDay} · ~${usage.tokens}` });
   if (!facts.connected) rows.push({ label: 'Antigravity', value: strings.hud_unavailable });
@@ -77,7 +74,7 @@ function publishFacts(force = false) {
   lastState = state;
   const message = {
     t: 'facts', state, quota: quota.mood === 'empty' ? 'critical' : quota.mood, late: isLate(new Date()),
-    subagents: facts.subagents, jarLevel: quota.level, jarLabel: quota.level == null ? '' : `${Math.round(quota.level * 100)}%`, hud: hudRows(),
+    subagents: facts.subagents, stashLevel: quota.level, stashLabel: quota.level == null ? '' : `${Math.round(quota.level * 100)}%`, hud: hudRows(),
   };
   const json = JSON.stringify(message);
   if (process.env.HAGEMI_DEBUG && state !== lastLoggedState) {
@@ -178,7 +175,8 @@ async function pollQuota() {
   try {
     const response = await ls.call('RetrieveUserQuotaSummary');
     const now = Date.now();
-    const next = summarize(parseQuota(response, now), selectedModel?.label || 'gemini', quotaOptions(), now);
+    allBuckets = parseQuota(response, now);
+    const next = summarize(allBuckets, selectedModel?.label || 'gemini', quotaOptions(), now);
     for (const event of quotaEvents(quota, next, quotaOptions())) {
       if (event.type === 'quota_ok') continue;
       moment(event.type, { vars: { left: event.type === 'reset_soon' ? formatDuration(event.resetInMs, language()) : `${Math.round(event.level * 100)}%` } });
@@ -297,3 +295,13 @@ async function shutdown() {
   process.exit(0);
 }
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, shutdown);
+
+// Uninstalling while she runs fails on Windows: the app's launcher keeps the plugin folder open
+// and the uninstall stops halfway, with her files gone. Leave then, so a second try succeeds.
+const manifest = join(dirname(fileURLToPath(import.meta.url)), 'sidecar.json');
+const orphanCheck = setInterval(() => {
+  if (existsSync(manifest)) return;
+  log('plugin files removed, leaving');
+  shutdown();
+}, 5000);
+orphanCheck.unref?.();

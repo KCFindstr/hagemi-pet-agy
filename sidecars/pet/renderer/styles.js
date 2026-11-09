@@ -68,4 +68,6 @@ HAGEMI.css = `
 .field input[type="checkbox"] { accent-color: #8b5cf6; width: 15px; height: 15px; }
 .field textarea { width: 148px; resize: vertical; }
 .panel-note { color: #6b5b95; }
+.panel-note + .panel-note { margin-top: 5px; }
+.panel-link { color: #7c3aed; margin-right: 12px; }
 `;

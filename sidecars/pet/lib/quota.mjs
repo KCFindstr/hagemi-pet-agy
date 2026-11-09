@@ -1,5 +1,5 @@
-// Quota is honey: reads the buckets, classifies how she should feel, and notices the moments
-// worth reacting to (running low, a reset coming up, the jar refilling).
+// Quota is her dried fish: reads the buckets, classifies how she should feel, and notices the
+// moments worth reacting to (running low, a reset coming up, the bowl refilling).
 const clampFraction = value => {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : null;
@@ -34,6 +34,12 @@ export function bucketsForModel(buckets, label = '') {
     return /gemini/.test(group) && !/argon/.test(group);
   });
   return specific.length ? specific : buckets;
+}
+
+// What is left for one model, whichever model the user happens to have selected.
+export function levelForModel(buckets, label) {
+  const known = bucketsForModel(buckets, label).filter(b => b.remaining != null);
+  return known.length ? Math.min(...known.map(b => b.remaining)) : null;
 }
 
 export const moodFor = (level, { lowAt = 0.25, criticalAt = 0.1 } = {}) => {
@@ -72,6 +78,22 @@ export function quotaEvents(previous, current, { resetSoonMs = 20 * 60000, reset
 
 export function isResetSoon(summary, { resetSoonMs = 20 * 60000, resetSoonBelow = 0.5 } = {}) {
   return summary.resetInMs != null && summary.resetInMs <= resetSoonMs && summary.level != null && summary.level <= resetSoonBelow;
+}
+
+// Status rows, headed by the server's name for the group so it is clear whose quota this is.
+export function quotaRows(buckets, strings, language = 'en', now = Date.now()) {
+  const rows = [];
+  let group = null;
+  for (const bucket of buckets) {
+    if (bucket.group && bucket.group !== group) {
+      group = bucket.group;
+      rows.push({ label: group, value: '' });
+    }
+    const label = bucket.window === '5h' ? strings.hud_5h : bucket.window === 'weekly' ? strings.hud_weekly : bucket.id;
+    const reset = bucket.resetAt ? ` · ${formatDuration(bucket.resetAt - now, language)}` : '';
+    rows.push({ label, level: bucket.remaining, value: `${Math.round(bucket.remaining * 100)}%${reset}` });
+  }
+  return rows;
 }
 
 export function formatDuration(ms, language = 'en') {

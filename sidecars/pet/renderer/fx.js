@@ -1,4 +1,4 @@
-// Soft particles, the honey jar (quota) and mini clones (subagents). Clones are the real art
+// Soft particles, her dish of dried fish (quota) and mini clones (subagents). Clones are the real art
 // scaled down; particles stay small, round and pastel so the painted pose keeps the spotlight.
 HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
   const { clamp, rand, lerp } = HAGEMI.util;
@@ -23,7 +23,98 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
     ctx.closePath();
   };
 
+  // One 小鱼干: curled from drying, silver back, warm belly, inked like the rest of her world.
+  function fish(ctx, x, y, length, angle, flip) {
+    const k = length / 62;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(flip ? -k : k, k);
+    const body = () => {
+      ctx.beginPath();
+      ctx.moveTo(-31, 2);
+      ctx.bezierCurveTo(-25, -10, -6, -13, 10, -7);
+      ctx.quadraticCurveTo(16, -4.5, 20, -2);
+      ctx.quadraticCurveTo(26, -7, 33, -11);
+      ctx.quadraticCurveTo(29, -1, 33, 8);
+      ctx.quadraticCurveTo(25, 5, 20, 2);
+      ctx.quadraticCurveTo(14, 6, 8, 7.5);
+      ctx.bezierCurveTo(-8, 11.5, -24, 10, -31, 2);
+      ctx.closePath();
+    };
+    body();
+    const skin = ctx.createLinearGradient(0, -12, 0, 11);
+    skin.addColorStop(0, '#7d86bd');
+    skin.addColorStop(0.42, '#c9cee8');
+    skin.addColorStop(0.72, '#f7e6bf');
+    skin.addColorStop(1, '#e8b877');
+    ctx.fillStyle = skin;
+    ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.save();
+    body();
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-14, -6);
+    ctx.quadraticCurveTo(0, -9, 10, -4.5);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(47, 42, 110, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-16, -6);
+    ctx.quadraticCurveTo(-12, 0, -15, 7);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-22.5, -1, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.fillStyle = OUTLINE;
+    ctx.beginPath();
+    ctx.arc(-22.8, -0.8, 1.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // All that is left of the last one.
+  function fishbone(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.08);
+    ctx.lineCap = 'round';
+    for (const [width, color] of [[4.4, OUTLINE], [2, '#f2eeff']]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(17, 0);
+      for (const rib of [-8, -1, 6]) { ctx.moveTo(rib + 2, -6); ctx.lineTo(rib - 1, 6); }
+      ctx.moveTo(17, 0); ctx.lineTo(23, -5);
+      ctx.moveTo(17, 0); ctx.lineTo(23, 5);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-24, 0);
+    ctx.quadraticCurveTo(-20, -7, -14, -3);
+    ctx.lineTo(-14, 3);
+    ctx.quadraticCurveTo(-20, 7, -24, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#f2eeff';
+    ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   const KINDS = {
+    fish(ctx, p) { fish(ctx, 0, 0, p.size, 0, p.flip); },
     star(ctx, p) {
       const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
       glow.addColorStop(0, '#ffffff');
@@ -90,7 +181,7 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
       life: 0, ttl: options.ttl ?? 1.4,
       size: options.size ?? 10, spin: options.spin ?? 0, angle: options.angle ?? 0,
       color: options.color ?? PALETTE[(Math.random() * PALETTE.length) | 0],
-      text: options.text, drag: options.drag ?? 0, front: options.front !== false, wobble: options.wobble ?? 0, phase: Math.random() * 6.28,
+      text: options.text, flip: options.flip, drag: options.drag ?? 0, front: options.front !== false, wobble: options.wobble ?? 0, phase: Math.random() * 6.28,
     });
   }
 
@@ -114,8 +205,8 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
     dust(x, y, n = 10) {
       for (let i = 0; i < n; i++) emit('puff', x + rand(-110, 110), y + 230, { vx: rand(-80, 80), vy: rand(-30, -5), ttl: rand(0.4, 0.8), size: rand(9, 18), color: 'rgba(190,180,230,0.6)', drag: 1.6 });
     },
-    honey(x, y, n = 18) {
-      for (let i = 0; i < n; i++) emit('drop', x + rand(-170, 170), y - 330, { vy: rand(60, 220), ay: 360, ttl: rand(0.8, 1.3), size: rand(7, 12), color: i % 3 ? '#fbbf24' : '#fde68a', front: i % 2 === 0 });
+    fish(x, y, n = 16) {
+      for (let i = 0; i < n; i++) emit('fish', x + rand(-190, 190), y - 340 + rand(-40, 20), { vy: rand(40, 170), ay: 340, ttl: rand(0.9, 1.5), size: rand(44, 66), spin: rand(-4, 4), angle: rand(-1, 1), flip: i % 2 === 0, front: i % 2 === 0 });
     },
     notes(x, y, n = 4) {
       for (let i = 0; i < n; i++) emit('text', x + rand(-130, 130), y - 250, { text: Math.random() < 0.5 ? '♪' : '♫', size: rand(24, 32), vy: rand(-70, -30), wobble: 24, ttl: rand(1.1, 1.8), color: '#8b6bf0' });
@@ -150,77 +241,71 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
     }
   }
 
-  // ---- Honey jar: quota is honey (哈基米 = honey water) -------------------------------------
-  const jar = { show: 0, target: 0, level: 1, label: '' };
-  function drawJar(ctx, dt, t) {
-    jar.show = lerp(jar.show, jar.target, 1 - Math.exp(-dt * 7));
-    if (jar.show < 0.01) return;
-    const level = jar.level;
+  // ---- Her dish of dried fish: quota is 小鱼干, and the pile is the meter ---------------------
+  const stash = { show: 0, target: 0, level: 1, label: '' };
+  // Lowest row first: as quota drains, the top of the pile goes before the bottom.
+  const PILE = [[-27, -8, 0.32, 0.9], [-6, -12, -0.2, 1], [17, -8, 0.14, 0.95], [32, -6, -0.46, 0.8], [-17, -21, -0.42, 0.95], [7, -24, 0.3, 1], [25, -19, -0.2, 0.88], [-5, -34, 0.5, 0.92], [13, -36, -0.36, 0.86]];
+  function drawStash(ctx, dt, t) {
+    stash.show = lerp(stash.show, stash.target, 1 - Math.exp(-dt * 7));
+    if (stash.show < 0.01) return;
     ctx.save();
-    ctx.translate(STAGE.cx - 262 + Math.sin(t * 1.1) * 5, 190 + Math.sin(t * 1.7) * 8);
-    ctx.rotate(Math.sin(t * 0.9) * 0.05);
-    const pop = jar.show * (1 + 0.14 * Math.sin(jar.show * Math.PI));
-    ctx.scale(pop * 1.28, pop * 1.28);
-    ctx.globalAlpha = clamp(jar.show * 1.4, 0, 1);
-    const glass = () => { ctx.beginPath(); ctx.roundRect(-36, -34, 72, 78, 20); };
-    glass();
-    const shine = ctx.createLinearGradient(-36, 0, 36, 0);
-    shine.addColorStop(0, 'rgba(232, 226, 255, 0.72)');
-    shine.addColorStop(0.5, 'rgba(255, 255, 255, 0.34)');
-    shine.addColorStop(1, 'rgba(206, 194, 250, 0.7)');
-    ctx.fillStyle = shine;
-    ctx.fill();
-    ctx.save();
-    glass();
-    ctx.clip();
-    const top = 44 - level * 76;
-    const honey = ctx.createLinearGradient(0, top, 0, 46);
-    const colors = level < 0.1 ? ['#ffb37a', '#ea6a2a'] : level < 0.25 ? ['#ffcf6e', '#ee8f22'] : ['#ffe58f', '#f4a81c'];
-    honey.addColorStop(0, colors[0]);
-    honey.addColorStop(1, colors[1]);
-    ctx.fillStyle = honey;
-    ctx.beginPath();
-    ctx.moveTo(-40, top);
-    for (let x = -40; x <= 40; x += 4) ctx.lineTo(x, top + Math.sin(x * 0.2 + t * 3.6) * 2);
-    ctx.lineTo(40, 48);
-    ctx.lineTo(-40, 48);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-    glass();
-    ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 3.2;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.82)';
-    ctx.lineWidth = 3.6;
+    ctx.translate(STAGE.cx - 268 + Math.sin(t * 1.1) * 5, 205 + Math.sin(t * 1.7) * 8);
+    ctx.rotate(Math.sin(t * 0.9) * 0.04);
+    const pop = stash.show * (1 + 0.14 * Math.sin(stash.show * Math.PI));
+    ctx.scale(pop * 1.42, pop * 1.42);
+    ctx.globalAlpha = clamp(stash.show * 1.4, 0, 1);
+    ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
+    // Inside of the bowl.
     ctx.beginPath();
-    ctx.moveTo(-24, -18);
-    ctx.quadraticCurveTo(-27, -4, -24, 12);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.roundRect(-31, -47, 62, 16, 6);
-    const lid = ctx.createLinearGradient(0, -47, 0, -31);
-    lid.addColorStop(0, '#c7b4ff');
-    lid.addColorStop(1, '#7d67e0');
-    ctx.fillStyle = lid;
+    ctx.ellipse(0, -2, 47, 13, 0, 0, Math.PI * 2);
+    const inside = ctx.createLinearGradient(0, -15, 0, 11);
+    inside.addColorStop(0, '#574a9c');
+    inside.addColorStop(1, '#8a78d4');
+    ctx.fillStyle = inside;
     ctx.fill();
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.6;
     ctx.stroke();
-    star(ctx, 0, -39, 6.5, 0.32);
-    ctx.fillStyle = '#fff6d6';
+    const count = stash.level <= 0.001 ? 0 : Math.max(1, Math.ceil(stash.level * PILE.length));
+    if (!count) fishbone(ctx, 2, -3);
+    for (let i = count - 1; i >= 0; i--) {
+      const [x, y, angle, size] = PILE[i];
+      fish(ctx, x, y + Math.sin(t * 2 + i) * 0.5, 52 * size, angle, i % 2 === 0);
+    }
+    // Front wall of the bowl hides the bottom of the pile.
+    ctx.beginPath();
+    ctx.moveTo(-47, -2);
+    ctx.bezierCurveTo(-44, 8, -44, 22, -30, 31);
+    ctx.quadraticCurveTo(0, 37, 30, 31);
+    ctx.bezierCurveTo(44, 22, 44, 8, 47, -2);
+    ctx.bezierCurveTo(30, 16, -30, 16, -47, -2);
+    ctx.closePath();
+    const wall = ctx.createLinearGradient(0, -2, 0, 36);
+    wall.addColorStop(0, '#fbf8ff');
+    wall.addColorStop(0.55, '#d9cdfb');
+    wall.addColorStop(1, '#a896ee');
+    ctx.fillStyle = wall;
     ctx.fill();
-    if (jar.label) {
-      ctx.font = '700 19px "Segoe UI", system-ui, sans-serif';
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+    // A soft shine and her star on the bowl.
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-36, 11);
+    ctx.quadraticCurveTo(-30, 20, -21, 25);
+    ctx.stroke();
+    if (stash.label) {
+      ctx.font = '700 15px "Segoe UI", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#ffffffe0';
-      ctx.strokeText(jar.label, 0, 16);
+      ctx.lineWidth = 3.4;
+      ctx.strokeStyle = '#ffffffd8';
+      ctx.strokeText(stash.label, 2, 21);
       ctx.fillStyle = OUTLINE;
-      ctx.fillText(jar.label, 0, 16);
+      ctx.fillText(stash.label, 2, 21);
     }
     ctx.restore();
   }
@@ -251,9 +336,9 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
   let zTimer = 0;
   return {
     burst(name, x, y, ...rest) { if (BURSTS[name]) BURSTS[name](x, y, ...rest); },
-    setJar(value) {
-      jar.target = value ? 1 : 0;
-      if (value) { jar.level = clamp(value.level, 0, 1); jar.label = value.label || ''; }
+    setStash(value) {
+      stash.target = value ? 1 : 0;
+      if (value) { stash.level = clamp(value.level, 0, 1); stash.label = value.label || ''; }
     },
     setCloneImage(bitmap) { cloneImage = bitmap; },
     setClones(count) {
@@ -278,7 +363,7 @@ HAGEMI.createFx = function createFx(backCanvas, frontCanvas) {
         ctx.setTransform(k, 0, 0, k, marginPx + pose.shiftX * k, marginPx + (pose.bob * 0.5 + pose.shiftY) * k);
         drawClones(ctx, dt, t, isFront);
         drawParticles(ctx, isFront);
-        if (isFront) drawJar(ctx, dt, t);
+        if (isFront) drawStash(ctx, dt, t);
       }
     },
     clear() { particles = []; clones = []; },

@@ -1,150 +1,194 @@
 <div align="center">
 
-<img src="assets/logo.png" width="128" alt="哈基米">
+<img src="assets/logo.png" width="112" alt="哈基米">
 
 # 哈基米桌宠 · Antigravity 插件
 
-一只飘在 [Antigravity](https://antigravity.google) 窗口里的 Q 版 Gemini 猫娘:看着你的代理干活,还很有意见。
+一只住在 [Antigravity](https://antigravity.google) 窗口里的 Q 版 Gemini 猫娘，看着你的代理干活，还很有自己的想法。
 
 [English](README.md) · **简体中文**
 
+<img src="docs/media/zhs/hello.webp" width="288" alt="哈基米打招呼">
+
 </div>
 
-![哈基米的姿势](docs/poses.webp)
+哈基米是中文社区给 Gemini 起的昵称，也是一个关于猫的梗。所以她是一只猫：你的额度是她囤的小鱼干，每个子代理都是一只迷你版的她。
 
-「哈基米」是 Gemini 在中文社区的昵称,也是蜂蜜水,还是个猫猫梗。所以额度就是她的蜂蜜,罐子见底她就蔫了,子代理则是她分出来的小分身。
+## 她陪你一起干活
 
-## 她会做什么
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/work.webp" width="240" alt="看书、写字、跑命令、搜索和画画"></td>
+<td>
 
-**跟着代理动。** 每种状态都有一张专门的立绘:
+**你的代理在做什么，她就演什么。** 读文件、写代码、跑命令、上网搜索、画图，各有各的姿势。代理等你回复时，她会招手叫你过来。
 
-| 什么时候 | 她 |
-| --- | --- |
-| 代理在思考 | 点着脸颊想事情,想太久还会急 |
-| 读文件、改代码、跑命令、搜索 | 看书、记笔记、挥爪子、举放大镜 |
-| 生成图片 | 挥舞 Nano Banana 香蕉画笔 |
-| 子代理在运行 | 每个子代理对应一只绕着她转的小分身 |
-| 代理在等你回话 | 招手叫你过来 |
-| 一轮结束 | 欢呼,大活完成还会转圈撒彩带 |
-| 一轮出错 | 条件反射道歉,然后怀疑这是不是自己的错 |
-| 同时 2 个会话,再到 3 个以上 | 先是两边兼顾,然后手忙脚乱 |
-| 上下文太大或正在压缩 | 坐到行李箱上帮忙压 |
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/reactions.webp" width="280" alt="欢呼、得意和道歉"></td>
+<td>
 
-**感受额度和时间。**
+**任务结束时她会有反应。** 完成了就欢呼，大活干完转个圈庆祝，出错了就慌忙道歉，哪怕根本不是她的错。
 
-- 额度偏低:蔫下去,旁边出现蜂蜜罐。见底前:求你轻一点。用光:整只放空飘着。
-- 额度偏低又快重置时:打起精神倒计时。蜂蜜回来时:举起礼物盒,蜂蜜雨从天而降。
-- 时间:不同时段有不同问候,凌晨三点催你睡觉,连续工作两小时提醒你活动,节日还会换装。
-- 切到 Claude 或 GPT 她会吃醋,切回来就原谅你。
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/subagents.webp" width="270" alt="每个子代理一只迷你分身"></td>
+<td>
 
-**住在你的窗口里。**
+**子代理就是迷你哈基米。** 每个运行中的子代理都会变成一只小分身飘在她旁边。开得越多，她越得意。
 
-- 随便拖。头发和尾巴带弹簧物理,会跟在后面甩。扔出去会在零重力里滑行,碰到窗口边缘再弹回来。
-- 使劲晃她会晕。戳多了会从不耐烦、鼓脸、红温一路升级到赌气,摸摸头才哄得好。
-- 拖到窗口边缘会趴在边上,鼠标靠近时探出头来。
-- 目光跟随鼠标。她周围的透明区域不挡点击,可以直接点到应用。
-- 双击让她说话,悬停查看额度和代理状态,右键打开菜单和设置。
+</td>
+</tr>
+</table>
+
+## 她帮你盯着额度
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/quota.webp" width="240" alt="小鱼干快吃完了，然后补满"></td>
+<td>
+
+**额度就是她的小鱼干。** 额度变少时她会蔫下去，旁边出现鱼盘，鱼越来越少。额度快重置时她会打起精神，补满时：礼物盒加一场小鱼干雨。
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/status.webp" width="230" alt="显示额度和代理的状态面板"></td>
+<td>
+
+**把鼠标停在她身上**，可以看到剩余额度、重置时间和正在运行的代理数量。
+
+</td>
+</tr>
+</table>
+
+## 她是有脾气的
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/touch.webp" width="240" alt="摸头、戳她和生闷气"></td>
+<td>
+
+**摸摸头**她会呼噜。**一直戳她**，她会从吃惊到不耐烦，再到气鼓鼓，再到炸毛，最后生闷气不理你。摸摸头就好了。
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/drag.webp" width="360" alt="拖动和扔出去"></td>
+<td>
+
+**随便拖她到哪里。** 头发和尾巴会跟着飘。把她扔出去，她会滑行并在边缘反弹。使劲晃她会晕。
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/dock.webp" width="140" alt="从窗口边缘探头"></td>
+<td>
+
+**把她塞到窗口边缘**，她会躲在那里，鼠标靠近时探出头来。
+
+</td>
+</tr>
+</table>
+
+## 她知道现在几点
+
+- 早上、中午、下午、傍晚和夜里各有不同的问候。
+- 过了凌晨一点还在干活？她会催你睡觉。连续工作两小时？该伸个懒腰了。
+- 万圣节、圣诞节、元旦、春节、元宵、端午、中秋和国庆都有节日装扮。
+- 把代理换成 Claude 或 GPT，她会吃醋。换回来就原谅你。
+
+## 她会说中文和英文
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/zhs/language.webp" width="270" alt="一条英文吐槽"></td>
+<td>
+
+默认跟随 Antigravity 的语言，也可以手动选择。她的性格参考了 B 站创作者笔下俏皮的 Gemini 娘。
+
+</td>
+</tr>
+</table>
 
 ## 安装
 
-需要 Antigravity **桌面应用**。桌宠依赖的 Sidecar 在 CLI 和 IDE 扩展里不可用。
+需要 Antigravity **桌面应用**。她不会出现在 CLI、IDE 扩展和远程控制网页端里。
+
+用 Antigravity CLI 安装：
 
 ```bash
-git clone https://github.com/KCFindstr/hagemi-pet-agy.git
-cd hagemi-pet-agy
-npm run install:local
+agy plugin install https://github.com/KCFindstr/hagemi-pet-agy
 ```
 
-大约 30 秒内她就会出现在右下角。如果没有,重启一次 Antigravity。
+大约 30 秒内她就会出现在右下角。如果没有，重启一次 Antigravity。
 
-卸载:
+卸载时先关掉她，再卸载：
 
 ```bash
-npm run uninstall:local
+agy plugin disable hagemi-pet-agy
 ```
 
-## 吐槽和花费
+```bash
+agy plugin uninstall hagemi-pet-agy
+```
 
-她说的话大多是写好的台词,不花钱。只有值得的时刻才会调用模型,而且要通过下面每一项检查。关掉 AI 后,所有台词依然都在。
+她的设置会保留，方便她回来。
 
-| 限制 | 默认值 | 可设置 |
-| --- | --- | --- |
-| 模型 | `Gemini 3.8 Flash (Low)`,最省的版本 | 你列表里的任何模型 |
-| 哪些时刻 | 大活完成、出错、深夜等少数时刻,随话量调整 | 话量 |
-| 两次调用的最短间隔 | 10 分钟 | 是 |
-| 每小时 / 每天次数 | 4 / 24 | 是 |
-| 每天估算 Token | 12,000,每次约 500 | 是 |
-| 额度低时暂停 | 低于 15% | 是 |
-| 只在你看着时 | 窗口聚焦且可见 | 是 |
-| 同样的情况重复调用 | 6 小时内不会 | |
-| 失败之后 | 退避 2 到 60 分钟,期间改用台词 | |
+## AI 吐槽
 
-调用走 Antigravity 自己的本地语言服务器,使用你已登录的账号,所以不需要 API Key,也会计入你的正常额度。Token 数是估算值,因为接口不返回用量。AI 生成的吐槽会带 ✦ 标记,当天用量可以在设置面板里看到。
+她说的话大多是手写的台词。遇到大一点的时刻，比如任务完成、出错或额度变化，她会请模型现编一句吐槽，带 ✦ 标记。调用使用你的 Antigravity 账号，计入你的正常额度，不需要配置 API Key。
+
+默认值比较宽松，但有上限：
+
+- **模型：** Gemini 3.8 Flash (Low)，最省的版本。可以换成你列表里的任何模型。
+- **频率：** 两次吐槽至少间隔 2 分钟，每小时最多 30 次，每天最多 300 次。
+- **时机：** 只在 Antigravity 窗口在前台时调用，该模型额度低于 5% 时不再调用。
+- **重复：** 同样的情况 6 小时内不会再问。
+
+关掉 AI 后，所有手写台词依然都在。
 
 ### 模型能看到什么
 
-在「她能看到什么」里设置:
+在「她能看到什么」里设置：
 
-- **只有数字和工具名:** 次数、时长、额度和时间。
+- **只有数字和工具名：** 次数、时长、额度和时间。
 - **加上对话标题。**
-- **再加上简短摘录**(默认):你最后一句话约 100 字以内,代理最后一句话约 130 字以内。代码块、链接、文件路径、长串字符和形似密钥的内容会先被移除。
+- **再加上简短摘录**（默认）：你最后一句话约 100 字以内，代理最后一句话约 130 字以内。代码块、链接、文件路径、长串字符和形似密钥的内容会先被移除。
 
-摘录会发给你选的模型,它不一定是当前对话正在用的模型。她只用按键的*时间*来避免打断你,绝不读取按键内容。除了设置和当天用量,什么都不保存。
+摘录会发给你选的模型，它不一定是当前对话正在用的模型。她只用按键的*时间*来避免打断你，绝不读取按键内容。除了设置和当天用量，什么都不保存。
 
 ## 设置
 
-右键点她,选择 **设置…**。可以设置语言(English、简体中文或跟随应用)、大小、动画质量、话量、目光跟随、上面的 AI 限制,以及额外的人设说明。设置保存在 `~/.gemini/antigravity/sidecar_data/hagemi-pet-agy/pet/data/settings.json`。
+右键点她可以快速调整，选择 **设置…** 可以修改全部选项：语言、大小、动画质量、话量、目光跟随、AI 限制，以及额外的人设说明。双击她可以让她说句话。
 
-## 工作原理
+<p align="center">
+<img src="docs/media/zhs/menu.webp" width="250" alt="右键菜单">&nbsp;&nbsp;&nbsp;
+<img src="docs/media/zhs/settings.webp" width="360" alt="设置面板">
+</p>
 
-```
-Antigravity
-├── 语言服务器 ──┐  会话列表、额度、模型列表、一句话补全
-├── brain/*/transcript.jsonl ──┤  工具活动(从旁读取)
-│                ▼
-│        sidecars/pet/main.mjs   monitor → director → brain
-│                │
-│                ▼  Chrome DevTools 协议,隔离环境
-└── 应用窗口 ── 封闭的 Shadow DOM ── WebGL 网格绑定 + Canvas 粒子 + 气泡
-```
+## 须知
 
-- **渲染:** 每个姿势是网格上的一张贴图。根据每张图的关键点生成柔性权重,让头发、尾巴、耳朵、头和腿发生形变,再加上弹簧跟随和转头视差。眨眼是手绘风格的贴片,通过同一张网格变形。姿势之间用短暂的交叉淡入切换。
-- **行为:** 代理运行时每 2 秒轮询一次,否则每 4 秒一次,并且只读取活跃对话日志的新增内容。窗口隐藏时暂停渲染。
-- **隔离:** 桌宠运行在隔离环境和封闭的 Shadow Root 里,碰不到应用的 JavaScript 和样式,Sidecar 停止时也会干净地移除。
+- 她只住在桌面应用里。远程控制的网页端看不到她，但她会在你的电脑上继续关注，回来时状态是最新的。
+- 她从旁观察，不会拖慢你的代理。
+- 她用到了 Antigravity 未公开的部分，所以 Antigravity 更新后她可能不再出现或不再有反应。应用本身不依赖她。
+- 已在 Windows 上测试。macOS 和 Linux 理论上可用，但还没试过。
 
-### 为什么不用插件 Hook 或侧边面板?
+## 她的全部姿势
 
-Antigravity 文档提供了 Hook 和 Sidecar,但没有让插件在应用上层绘制的方式,而 Hook 会在代理循环里为每次工具调用启动一个进程。所以这个插件:
+![哈基米的姿势](docs/poses.webp)
 
-- 从旁读取活动,绝不会拖慢你的代理;
-- 通过应用自己开启的 DevTools 端口进入窗口,不修改任何应用文件;
-- 使用了未公开的本地接口:`GetAllCascadeTrajectories`、`RetrieveUserQuotaSummary`、`GetModelResponse` 等。
+想知道她的工作原理，或者想修改她？请看 [docs/DEVELOPMENT.zh-CN.md](docs/DEVELOPMENT.zh-CN.md)。
 
-**Antigravity 更新可能让这些失效。** 应用本身不依赖它们,所以最坏的情况是她不再出现或不再有反应。已在 Windows 上的 Antigravity 2.28.2 测试。macOS 和 Linux 的路径已实现,但还没在真机上试过。
+## 致谢
 
-## 开发
-
-需要 Node 22 或更高版本。没有运行时依赖,也不需要构建。
-
-```bash
-npm test
-```
-
-```bash
-npm run preview
-```
-
-`preview` 会在 http://127.0.0.1:7891 打开排练舞台,每个状态、动作和台词都有按钮,不需要 Antigravity。`npm run dev` 会让 Sidecar 连接正在运行的应用,不安装任何东西,并输出详细日志。
-
-修改姿势或关键点(`tools/landmarks.json`)后需要重新生成绑定数据。只有这一步需要带 Pillow 和 numpy 的 Python:
-
-```bash
-npm run build:rig
-```
+灵感来自 lokicorvus 及贡献者的 [CrossPet](https://github.com/lokicorvus/crosspet)，一款会跟着 AI 做动作的桌宠。CrossPet 的代码采用 [MIT 许可](https://github.com/lokicorvus/crosspet/blob/main/LICENSE)，美术（包括这里使用的角色美术）采用 [CC BY-NC-SA 4.0](https://github.com/lokicorvus/crosspet/blob/main/characters/LICENSE.md)。在应用里也能看到这些信息：右键点她，选择 **设置…**。
 
 ## 许可
 
-- **代码:** [MIT](LICENSE)。
-- **美术:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans),来自 [CrossPet](https://github.com/lokicorvus/crosspet)。这是**非商业、相同方式共享**的协议,带美术素材分发本插件时必须保持非商业。署名和详情见 [NOTICE.md](NOTICE.md)。
+- **代码：** [MIT](LICENSE)。
+- **美术：** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)，来自 [CrossPet](https://github.com/lokicorvus/crosspet)。这是**非商业、相同方式共享**的协议，带美术素材分发本插件时必须保持非商业。署名和详情见 [NOTICE.md](NOTICE.md)。
 
-这是非官方同人项目,与 Google 无关。感谢 lokicorvus 和 CrossPet 贡献者的美术,也感谢让 Gemini 娘成为她自己的 B 站创作者们。
+这是非官方同人项目，与 Google 无关。感谢 lokicorvus 和 CrossPet 贡献者的美术，也感谢让 Gemini 娘成为她自己的 B 站创作者们。

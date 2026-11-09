@@ -121,17 +121,17 @@ export class Brain {
       turn_done_big: zh ? '一个大任务刚刚完成' : 'A big agent task just finished',
       turn_error: zh ? '代理任务刚刚出错结束' : 'An agent task just ended in an error',
       long_run: zh ? '代理已经运行很久了' : 'The agent has been running for a long time',
-      subagent_many: zh ? '同时运行着很多子代理(你的小分身)' : 'Many subagents (your tiny clones) are running at once',
+      subagent_many: zh ? '同时运行着很多子代理（你的小分身）' : 'Many subagents (your tiny clones) are running at once',
       swamped: zh ? '用户同时开了很多会话' : 'The user has many sessions running at once',
       context_big: zh ? '当前对话的上下文非常大' : 'The current conversation context has grown huge',
       model_rival_claude: zh ? '用户刚把模型切成了 Claude' : 'The user just switched the model to Claude',
       model_rival_gpt: zh ? '用户刚把模型切成了 GPT' : 'The user just switched the model to GPT',
-      quota_critical: zh ? '额度(你的蜂蜜)快用完了' : 'Quota (your honey) is almost gone',
-      reset_soon: zh ? '额度快要重置了,蜂蜜马上回来' : 'Quota is about to reset; honey returns soon',
-      late_night: zh ? '深夜了,用户还在工作' : 'It is very late and the user is still working',
+      quota_critical: zh ? '额度（你的小鱼干）快用完了' : 'Quota (your dried fish) is almost gone',
+      reset_soon: zh ? '额度快要重置了，小鱼干马上回来' : 'Quota is about to reset; the dried fish return soon',
+      late_night: zh ? '深夜了，用户还在工作' : 'It is very late and the user is still working',
       long_session: zh ? '用户已经连续工作很久了' : 'The user has been working for a long stretch',
-      idle_ponder: zh ? '现在没什么事,随口说点什么' : 'Nothing much is happening; muse about something',
-      talk: zh ? '用户双击了你,想听你说话' : 'The user double-clicked you and wants to hear from you',
+      idle_ponder: zh ? '现在没什么事，随口说点什么' : 'Nothing much is happening; muse about something',
+      talk: zh ? '用户双击了你，想听你说话' : 'The user double-clicked you and wants to hear from you',
     };
     const facts = [];
     const date = new Date(this.now());
@@ -139,7 +139,7 @@ export class Brain {
     if (context.running != null) facts.push(`${zh ? '运行中的会话' : 'Running sessions'}: ${context.running}, ${zh ? '子代理' : 'subagents'}: ${context.subagents || 0}`);
     if (context.lastTool) facts.push(`${zh ? '最近的工具' : 'Last tool'}: ${context.lastTool}`);
     if (context.toolCount) facts.push(`${zh ? '工具调用次数' : 'Tool calls'}: ${context.toolCount}`);
-    if (context.durationMin) facts.push(`${zh ? '耗时(分钟)' : 'Duration (min)'}: ${context.durationMin}`);
+    if (context.durationMin) facts.push(`${zh ? '耗时（分钟）' : 'Duration (min)'}: ${context.durationMin}`);
     if (context.quotaPercent != null) facts.push(`${zh ? '额度剩余' : 'Quota left'}: ${context.quotaPercent}%`);
     if (context.model) facts.push(`${zh ? '用户选的模型' : 'Selected model'}: ${context.model}`);
     if (ai.contextLevel !== 'minimal' && context.title) facts.push(`${zh ? '对话标题' : 'Chat title'}: ${scrub(context.title, 70)}`);

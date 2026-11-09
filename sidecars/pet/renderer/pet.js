@@ -88,13 +88,15 @@ HAGEMI.boot = async function boot(send, options = {}) {
     const job = (async () => {
       const info = HAGEMI.rigData[name];
       if (!info) return null;
-      const [art, blinkArt] = await Promise.all([requestArt(name), info.blink ? requestArt(`blink/${name}`) : null]);
-      if (!art || !running) return null;
-      const bitmap = await decode(art);
-      const blinkBitmap = blinkArt ? await decode(blinkArt) : null;
-      const pose = rig.buildPose(name, bitmap, blinkBitmap, info);
-      bitmap.close();
-      blinkBitmap?.close();
+      const files = await Promise.all([
+        requestArt(name),
+        info.blink ? requestArt(`blink/${name}`) : null,
+        ...['tail', 'under', 'cut'].map(layer => (info.tailRect ? requestArt(`${layer}/${name}`) : null)),
+      ]);
+      if (!files[0] || !running) return null;
+      const layers = await Promise.all(files.map(blob => (blob ? decode(blob) : null)));
+      const pose = rig.buildPose(name, ...layers, info);
+      for (const layer of layers) layer?.close();
       poses.set(name, pose);
       // Keep only the poses in recent use on the GPU; the compressed art stays in memory.
       if (poses.size > POSE_CACHE) for (const [other, value] of poses) {
@@ -243,10 +245,13 @@ HAGEMI.boot = async function boot(send, options = {}) {
     hud.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }
   let hoverTimer = 0;
-  function showHud() { if (hudRows.length) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showJar: true }); } }
-  function hideHud() { hud.classList.remove('show'); animator.setMood({ showJar: false }); }
+  function showHud() { if (hudRows.length && !dragging) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showStash: true }); } }
+  function hideHud() { hud.classList.remove('show'); animator.setMood({ showStash: false }); }
 
   function openMenu(px, py) {
+    // The status panel would open behind the menu once the hover delay ran out.
+    clearTimeout(hoverTimer);
+    hideHud();
     menu.replaceChildren();
     const item = (label, action, checked) => {
       const button = make('button', 'item', menu);
@@ -357,6 +362,16 @@ HAGEMI.boot = async function boot(send, options = {}) {
       section(ui.section_usage || 'Usage today');
       make('div', 'panel-note', panel).textContent = (ui.usage || '{calls} AI comments, about {tokens} tokens').replace('{calls}', usage.calls).replace('{tokens}', usage.tokens);
     }
+    section(ui.section_licenses || 'Credits and licenses');
+    for (const key of ['license_code', 'license_art', 'license_inspired', 'license_fan']) make('div', 'panel-note', panel).textContent = ui[key] || '';
+    const links = make('div', 'panel-note', panel);
+    for (const [key, href] of [['license_link_crosspet', 'https://github.com/lokicorvus/crosspet'], ['license_link_art', 'https://creativecommons.org/licenses/by-nc-sa/4.0/']]) {
+      const link = make('a', 'panel-link', links);
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = ui[key] || href;
+    }
     panel.classList.add('show');
     const width = panel.offsetWidth, height = panel.offsetHeight;
     const left = x + spriteW * 0.5 + width + 10 < viewW() ? x + spriteW * 0.5 : Math.max(8, x - spriteW * 0.5 - width);
@@ -440,6 +455,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     if (event.button !== 0) return;
     event.preventDefault();
     hit.setPointerCapture(event.pointerId);
+    clearTimeout(hoverTimer);
     dragging = { id: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - x, offsetY: event.clientY - y, moved: false, at: performance.now(), px: event.clientX, py: event.clientY };
     closeBubble();
     hideHud();
@@ -587,7 +603,11 @@ HAGEMI.boot = async function boot(send, options = {}) {
 
     // Docked at a window edge she watches from the wall, peeking out as the cursor nears.
     if (docked && !dragging) {
-      const near = Math.abs(pointerX - x) < spriteW * 0.9 && Math.abs(pointerY - y) < spriteH * 0.7 && now - lastPointerAt < 2000;
+      // Only over the part of her that shows: about 290 art pixels out from the wall, 360 once she
+      // leans out, so the cursor has to leave what it can see before she hides again.
+      const peeking = animator.state === `dock${docked === 'left' ? 'Left' : 'Right'}Peek`;
+      const reach = (peeking ? 380 : 310) * scale;
+      const near = Math.abs(pointerX - x) < reach && Math.abs(pointerY - y) < spriteH * 0.5 && now - lastPointerAt < 2000;
       const dockState = `dock${docked === 'left' ? 'Left' : 'Right'}${near ? 'Peek' : ''}`;
       animator.override(dockState, 1200);
     }
@@ -668,7 +688,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
         break;
       case 'facts':
         if (!sulking) animator.setState(message.state);
-        animator.setMood({ quota: message.quota || 'ok', late: !!message.late, jarLevel: message.jarLevel ?? null, jarLabel: message.jarLabel || '', subagents: message.subagents || 0 });
+        animator.setMood({ quota: message.quota || 'ok', late: !!message.late, stashLevel: message.stashLevel ?? null, stashLabel: message.stashLabel || '', subagents: message.subagents || 0 });
         hudRows = message.hud || [];
         if (hud.classList.contains('show')) { renderHud(); placeHud(); }
         break;

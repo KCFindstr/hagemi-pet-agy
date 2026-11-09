@@ -16,11 +16,11 @@ export const DEFAULTS = Object.freeze({
   ai: Object.freeze({
     enabled: true,
     model: 'Gemini 3.8 Flash (Low)',
-    minIntervalMin: 10,
-    maxPerHour: 4,
-    maxPerDay: 24,
-    dailyTokenBudget: 12000,
-    pauseBelowQuota: 0.15,
+    minIntervalMin: 2,
+    maxPerHour: 30,
+    maxPerDay: 300,
+    dailyTokenBudget: 200000,
+    pauseBelowQuota: 0.05,
     contextLevel: 'snippets',
     onlyWhenFocused: true,
     personaExtra: '',
@@ -33,6 +33,30 @@ const number = (value, low, high, fallback) => {
   return Number.isFinite(parsed) ? Math.min(high, Math.max(low, parsed)) : fallback;
 };
 const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
+
+const SETTINGS_VERSION = 2;
+// Version 1 saved every value, defaults included, which would have pinned them forever.
+// Values still matching the old defaults were never chosen, so they follow the new ones.
+const V1_AI_DEFAULTS = { minIntervalMin: 10, maxPerHour: 4, maxPerDay: 24, dailyTokenBudget: 12000, pauseBelowQuota: 0.15 };
+function migrate(saved) {
+  if (saved.version >= SETTINGS_VERSION) return saved;
+  const ai = { ...saved.ai };
+  for (const [key, value] of Object.entries(V1_AI_DEFAULTS)) if (ai[key] === value) delete ai[key];
+  return { ...saved, ai };
+}
+
+// Only what differs from the defaults is stored, so improving a default reaches everyone.
+function changedFrom(defaults, value) {
+  const out = {};
+  for (const [key, current] of Object.entries(value)) {
+    const fallback = defaults[key];
+    if (current && typeof current === 'object' && fallback && typeof fallback === 'object') {
+      const nested = changedFrom(fallback, current);
+      if (Object.keys(nested).length) out[key] = nested;
+    } else if (JSON.stringify(current) !== JSON.stringify(fallback)) out[key] = current;
+  }
+  return out;
+}
 
 export function sanitize(input = {}, base = DEFAULTS) {
   const quota = input.quota || {}, ai = input.ai || {};
@@ -73,7 +97,7 @@ export class SettingsStore {
     this.file = file;
     let saved = {};
     try { saved = JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, '')); } catch { /* First run or unreadable: defaults. */ }
-    this.value = sanitize(saved);
+    this.value = sanitize(migrate(saved));
   }
 
   patch(change = {}) {
@@ -87,7 +111,7 @@ export class SettingsStore {
     try {
       mkdirSync(dirname(this.file), { recursive: true });
       const temporary = `${this.file}.${process.pid}.tmp`;
-      writeFileSync(temporary, JSON.stringify(this.value, null, 2));
+      writeFileSync(temporary, JSON.stringify({ version: SETTINGS_VERSION, ...changedFrom(DEFAULTS, this.value) }, null, 2));
       renameSync(temporary, this.file);
     } catch { /* Settings are a convenience; failing to save must not stop the pet. */ }
   }

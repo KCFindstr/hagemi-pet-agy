@@ -1,85 +1,154 @@
 <div align="center">
 
-<img src="assets/logo.png" width="128" alt="Hagemi">
+<img src="assets/logo.png" width="112" alt="Hagemi">
 
 # Hagemi Pet for Antigravity
 
-A chibi Gemini catgirl who floats in your [Antigravity](https://antigravity.google) window, watches your agents work, and has opinions about it.
+A chibi Gemini catgirl who lives in your [Antigravity](https://antigravity.google) window, watches your agents work, and has opinions about it.
 
 **English** · [简体中文](README.zh-CN.md)
 
+<img src="docs/media/hello.webp" width="288" alt="Hagemi waves hello">
+
 </div>
 
-![Hagemi's poses](docs/poses.webp)
+Hagemi (哈基米) is what Chinese fans call Gemini, and also a meme about cats. So she is a cat: your quota is her stash of 小鱼干 (dried fish), and every subagent is a tiny copy of her.
 
-Hagemi (哈基米) is a pun: the Chinese community's nickname for Gemini, a word for honey water, and a meme about cats, all at once. So quota is her honey, she wilts as the jar empties, and subagents are tiny clones of her.
+## She works alongside you
 
-## What she does
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/work.webp" width="240" alt="Reading, writing, running, searching and drawing"></td>
+<td>
 
-**She follows your agents.** Every state is its own painted pose:
+**She acts out what your agent is doing.** Reading files, writing code, running commands, searching the web, drawing images: each has its own pose. When an agent is stuck waiting for your answer, she waves you over.
 
-| When | She |
-| --- | --- |
-| An agent is thinking | taps her cheek, and frets if it takes too long |
-| Reading files, editing, running commands, searching | reads a book, writes in a notebook, works her paws, peers through a magnifier |
-| Generating an image | paints with a Nano Banana brush |
-| Subagents are running | gets one tiny clone orbiting her per subagent |
-| The agent is waiting on you | calls you over |
-| A turn finishes | cheers, or takes a victory spin with confetti after a big job |
-| A turn fails | apologizes on reflex, then wonders if it was even her fault |
-| 2 sessions at once, then 3+ | juggles laptops, then panics |
-| The context gets huge or compacts | sits on the suitcase to squeeze it shut |
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/reactions.webp" width="280" alt="Cheering, showing off and apologizing"></td>
+<td>
 
-**She feels your quota and the clock.**
+**She reacts when a job ends.** A cheer for a finished task, a victory spin after a big one, and a flustered apology when something breaks, even when it was not her fault.
 
-- Quota low: she droops and a honey jar appears. Critical: she begs you to be gentle. Empty: she floats, drained.
-- Reset coming up while you are low: she perks up and counts it down. When the honey comes back: a gift box and a shower of honey.
-- Time of day: a greeting for each part of the day, a nudge if you are up at 3am, a stretch reminder after two hours, festival outfits on the right days.
-- Switch to Claude or GPT and she gets jealous. Switch back and she forgives you.
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/subagents.webp" width="270" alt="Tiny clones for each subagent"></td>
+<td>
 
-**She lives in your window.**
+**Subagents are tiny Hagemis.** Each running subagent gets a little clone floating beside her. Run a lot of them and she gets very smug about it.
 
-- Drag her anywhere. Hair and tail trail behind her with spring physics. Throw her and she coasts in zero gravity and bumps off the walls.
-- Shake her and she gets dizzy. Poke her too much and she escalates from annoyed to puffed to red-hot to sulking. A head pat makes it better.
-- Drop her on a window edge and she docks there, peeking out as your cursor approaches.
-- She watches your cursor, and clicks in the empty parts of her box go straight through to the app.
-- Double-click to make her say something. Hover for quota and agent status. Right-click for the menu and settings.
+</td>
+</tr>
+</table>
+
+## She keeps an eye on your quota
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/quota.webp" width="240" alt="Running low on dried fish, then a refill"></td>
+<td>
+
+**Quota is her dried fish.** As it runs low she droops and her fish dish appears, emptier as it drains. When the quota is about to reset she perks up, and when it refills: a gift box and a shower of fish.
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/status.webp" width="230" alt="Status panel with quota and agents"></td>
+<td>
+
+**Hover over her** to see how much quota is left, when it resets, and how many agents are running.
+
+</td>
+</tr>
+</table>
+
+## She has feelings
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/touch.webp" width="240" alt="Head pats, pokes and a sulk"></td>
+<td>
+
+**Pat her head** and she purrs. **Poke her** and she goes from surprised to annoyed to puffed up to red hot, then sulks and ignores you. A head pat makes up for it.
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/drag.webp" width="360" alt="Dragging and throwing her"></td>
+<td>
+
+**Drag her anywhere.** Her hair and tail trail behind her. Throw her and she glides and bounces off the edges. Shake her hard and she gets dizzy.
+
+</td>
+</tr>
+<tr>
+<td width="300" align="center"><img src="docs/media/dock.webp" width="140" alt="Peeking from the window edge"></td>
+<td>
+
+**Tuck her into a window edge** and she hides there, peeking out when your cursor comes close.
+
+</td>
+</tr>
+</table>
+
+## She knows what time it is
+
+- A different greeting for morning, noon, afternoon, evening and night.
+- Up past 1am? She will tell you to sleep. Working for two hours straight? Time to stretch.
+- Festival outfits on Halloween, Christmas, New Year, Chinese New Year, the Lantern, Dragon Boat and Mid-Autumn festivals, and National Day.
+- Switch your agent to Claude or GPT and she gets jealous. Switch back and all is forgiven.
+
+## She speaks English and 简体中文
+
+<table>
+<tr>
+<td width="300" align="center"><img src="docs/media/language.webp" width="270" alt="A comment in Chinese"></td>
+<td>
+
+She follows Antigravity's language by default, or you can pick one. Her personality takes after the playful Gemini-musume drawn and voiced by Bilibili creators.
+
+</td>
+</tr>
+</table>
 
 ## Install
 
-Needs the Antigravity **desktop app**. Sidecars, which the pet runs on, are not available in the CLI or the IDE extensions.
+You need the Antigravity **desktop app**. She does not appear in the CLI, the IDE extensions or the Remote Control web client.
+
+Install her with the Antigravity CLI:
 
 ```bash
-git clone https://github.com/KCFindstr/hagemi-pet-agy.git
-cd hagemi-pet-agy
-npm run install:local
+agy plugin install https://github.com/KCFindstr/hagemi-pet-agy
 ```
 
 She appears in the bottom right within about 30 seconds. If she does not, restart Antigravity once.
 
-To remove her:
+To remove her, turn her off first, then uninstall:
 
 ```bash
-npm run uninstall:local
+agy plugin disable hagemi-pet-agy
 ```
 
-## Comments, and what they cost
+```bash
+agy plugin uninstall hagemi-pet-agy
+```
 
-Most of what she says is scripted and costs nothing. A model call only happens for moments worth one, and has to pass every check below. Turn AI off and she keeps every scripted line.
+Her settings are kept in case she comes back.
 
-| Limit | Default | Setting |
-| --- | --- | --- |
-| Model | `Gemini 3.8 Flash (Low)`, the cheapest variant | any model in your list |
-| Which moments | big jobs, failures, late nights and a few others, scaled by chattiness | chattiness |
-| Minimum gap between calls | 10 minutes | yes |
-| Calls per hour / per day | 4 / 24 | yes |
-| Estimated tokens per day | 12,000, about 500 per call | yes |
-| Pause when quota is low | below 15% | yes |
-| Only when you are looking | window focused and visible | yes |
-| The same situation twice | never within 6 hours | |
-| After a failure | backs off for 2 to 60 minutes, then uses a scripted line | |
+## AI comments
 
-Calls go through Antigravity's own local language server with your signed-in account, so there is no API key, and they count toward your normal quota. Token counts are estimates, because the endpoint does not report usage. Comments made by AI are marked with ✦, and today's tally is in the settings panel.
+Most of what she says is written by hand. For bigger moments, like a finished job, a failure or a quota change, she can ask a model for a fresh comment instead, marked with ✦. It uses your Antigravity account and counts toward your normal quota, so there is no API key to set up.
+
+The defaults are generous but capped:
+
+- **Model:** Gemini 3.8 Flash (Low), the cheapest. You can pick any model in your list.
+- **How often:** at most one comment every 2 minutes, 30 an hour and 300 a day.
+- **When:** only while the Antigravity window is in front, and never once that model's quota is below 5%.
+- **Repeats:** never the same situation twice within 6 hours.
+
+Turn AI off and she keeps every hand-written line.
 
 ### What the model sees
 
@@ -93,54 +162,29 @@ Excerpts go to the model you selected, which may not be the one the conversation
 
 ## Settings
 
-Right-click her and choose **Settings…**. You can set language (English, 简体中文, or follow the app), size, animation quality, chattiness, cursor tracking, the AI limits above, and extra persona notes. Settings are saved to `~/.gemini/antigravity/sidecar_data/hagemi-pet-agy/pet/data/settings.json`.
+Right-click her for quick options, or choose **Settings…** for everything: language, size, animation quality, how chatty she is, whether she follows your cursor, the AI limits, and extra notes for her personality. Double-click her to make her say something.
 
-## How it works
+<p align="center">
+<img src="docs/media/menu.webp" width="250" alt="Right-click menu">&nbsp;&nbsp;&nbsp;
+<img src="docs/media/settings.webp" width="360" alt="Settings panel">
+</p>
 
-```
-Antigravity
-├── language server ──┐  session list, quota, model list, one-line completions
-├── brain/*/transcript.jsonl ──┤  tool activity (read from the side)
-│                      ▼
-│              sidecars/pet/main.mjs   monitor → director → brain
-│                      │
-│                      ▼  Chrome DevTools Protocol, isolated world
-└── app window ── closed shadow DOM ── WebGL mesh rig + canvas particles + bubble
-```
+## Good to know
 
-- **Rendering:** each pose is one texture on a dense mesh. Soft weights derived from per-pose landmarks bend hair, tail, ears, head and legs, with springs for follow-through and a head-turn parallax. Blinks are painted patches warped through the same mesh, and pose changes are short crossfades.
-- **Behavior:** the sidecar polls every 2 seconds while agents run and every 4 seconds otherwise, and only reads the new bytes of active transcripts. She pauses rendering while the window is hidden.
-- **Isolation:** the pet runs in an isolated world inside a closed shadow root, so she cannot touch the app's JavaScript or styles, and it is removed cleanly when the sidecar stops.
+- She lives in the desktop app only. She does not appear in the Remote Control web client, but she keeps watching on your computer and is caught up when you come back.
+- She watches from the side, so she never slows your agents down.
+- She relies on parts of Antigravity that are not officially documented, so an Antigravity update could stop her from appearing or reacting. Nothing else in the app depends on her.
+- Tested on Windows. macOS and Linux should work but have not been tried yet.
 
-### Why not plugin hooks or a side panel?
+## All her poses
 
-Antigravity documents hooks and sidecars, but no way for a plugin to draw over the app, and hooks run a process inside the agent loop for every tool call. So this plugin:
+![Hagemi's poses](docs/poses.webp)
 
-- reads activity from the side, so it can never slow your agent down;
-- enters the window over the DevTools port the app already opens for itself, without patching any app files;
-- uses undocumented local APIs: `GetAllCascadeTrajectories`, `RetrieveUserQuotaSummary`, `GetModelResponse` and others.
+Curious how she works, or want to change her? See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-**An Antigravity update could break any of this.** Nothing else in the app depends on it, so the failure mode is that she stops appearing or stops reacting. Tested on Antigravity 2.28.2 on Windows. The macOS and Linux paths are implemented but have not been tried on a real machine.
+## Credits
 
-## Development
-
-Needs Node 22 or later. There are no runtime dependencies and no build step.
-
-```bash
-npm test
-```
-
-```bash
-npm run preview
-```
-
-`preview` opens a rehearsal stage at http://127.0.0.1:7891 with a button for every state, gesture and line, so you do not need Antigravity. `npm run dev` runs the sidecar against a running app without installing anything, with verbose logs.
-
-After changing poses or landmarks (`tools/landmarks.json`), regenerate the rig data. This step alone needs Python with Pillow and numpy:
-
-```bash
-npm run build:rig
-```
+Inspired by [CrossPet](https://github.com/lokicorvus/crosspet) by lokicorvus and contributors, a desktop pet that acts out what your AI is doing. CrossPet's code is under the [MIT License](https://github.com/lokicorvus/crosspet/blob/main/LICENSE) and its artwork, including the character art used here, is under [CC BY-NC-SA 4.0](https://github.com/lokicorvus/crosspet/blob/main/characters/LICENSE.md). You can also read this in the app: right-click her and choose **Settings…**.
 
 ## License
 
