@@ -43,7 +43,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
   const fx = HAGEMI.createFx(backCanvas, frontCanvas);
   const animator = HAGEMI.createAnimator(fx);
 
-  let settings = { language: 'en', size: 'm', hidden: false, muted: false, animation: 'balanced', followCursor: true, position: null };
+  let settings = { language: 'en', size: 'm', hidden: false, muted: false, animation: 'balanced', followCursor: true, quotaHoverDelayMs: 650, position: null };
   let ui = {};
   let hudRows = [];
   let scale = 0, pixelRatio = 0, spriteW = 0, spriteH = 0;
@@ -245,7 +245,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     hud.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }
   let hoverTimer = 0;
-  function showHud() { if (hudRows.length && !dragging) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showStash: true }); } }
+  function showHud() { if (hudRows.length && !dragging && !menu.classList.contains('show') && !panel.classList.contains('show')) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showStash: true }); } }
   function hideHud() { hud.classList.remove('show'); animator.setMood({ showStash: false }); }
 
   function openMenu(px, py) {
@@ -340,6 +340,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     field(ui.animation || 'Animation', select(s.animation, [['smooth', ui.animation_smooth], ['balanced', ui.animation_balanced], ['saver', ui.animation_saver]], value => patch({ animation: value })));
     field(ui.chattiness || 'Chattiness', select(s.chattiness, [['quiet', ui.chattiness_quiet], ['normal', ui.chattiness_normal], ['chatty', ui.chattiness_chatty]], value => patch({ chattiness: value })));
     field(ui.followCursor || 'Watch the cursor', check(s.followCursor, value => patch({ followCursor: value })));
+    field(ui.quotaHoverDelayMs || 'Quota hover delay (ms, 0 = instant)', number(s.quotaHoverDelayMs, 0, 10000, value => patch({ quotaHoverDelayMs: value })));
     field(ui.mute || 'Mute comments', check(s.muted, value => patch({ muted: value })));
     section(ui.section_ai || 'AI comments');
     field(ui.ai_enabled || 'Use AI', check(ai.enabled, value => patch({ ai: { enabled: value } })));
@@ -508,7 +509,11 @@ HAGEMI.boot = async function boot(send, options = {}) {
   listen(hit, 'pointerup', endDrag);
   listen(hit, 'pointercancel', endDrag);
   listen(hit, 'contextmenu', event => { event.preventDefault(); openMenu(event.clientX, event.clientY); });
-  listen(hit, 'pointerenter', () => { clearTimeout(hoverTimer); hoverTimer = setTimeout(showHud, 650); });
+  listen(hit, 'pointerenter', () => {
+    clearTimeout(hoverTimer);
+    if (settings.quotaHoverDelayMs === 0) showHud();
+    else hoverTimer = setTimeout(showHud, settings.quotaHoverDelayMs);
+  });
   listen(hit, 'pointerleave', () => { clearTimeout(hoverTimer); hideHud(); });
   listen(hit, 'pointermove', event => {
     // A slow back-and-forth over her head is a pat.

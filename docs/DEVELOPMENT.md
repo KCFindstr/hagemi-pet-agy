@@ -31,7 +31,18 @@ Antigravity documents hooks and sidecars, but no way for a plugin to draw over t
 
 ### Remote Control
 
-She lives in the desktop app only, and does not appear in the Remote Control web client. That client runs in your other browser, out of reach of the DevTools port, and Antigravity turns plugin panes off there. The sidecar keeps running on the host, so she is caught up when you return to the desktop window.
+The current plugin renders in the desktop app only. Remote Control is a separate web client, so it does not inherit DOM changes made in the desktop window. The sidecar keeps running on the host, so she is caught up when you return to that window.
+
+Web support is technically feasible, but it needs a browser companion rather than just a setting in this plugin. Checked against the installed Antigravity **2.29.0** frontend on **2026-11-09**:
+
+- `RendererBridge.targets()` reads the desktop profile's `DevToolsActivePort`, and `isAppWindow()` accepts only app pages on loopback. That debugger cannot inject into a browser on another device. Removing the loopback check would not give it access to that browser.
+- The frontend's Remote Control feature configuration sets `isRemoteControl: { feature: true }` and `extensibility: { feature: null }`. Its sidecar UI uses that extensibility feature, so the native plugin UI route is disabled there.
+- The renderer itself uses browser APIs: WebGL, canvas and a shadow root. `npm run preview` already runs it in a normal browser without Electron or the desktop app, and the hover-delay verification used that path successfully.
+- The frontend contains a `retrieveUserQuotaSummary` client binding. This is evidence of a possible data source for a companion, not confirmation that every API used by this sidecar is available over Remote Control.
+
+A practical implementation would install an extension or userscript in the browser viewing Remote Control, bundle the existing renderer and art, store settings in the browser, and replace the `__hagemiCall` CDP binding with a browser adapter. [Chrome content scripts](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts) can add UI to matching pages in an isolated world, which fits the existing renderer. Live quota and activity would need to use the web client's authenticated transport, with its RPC availability verified first; the browser cannot read the host's transcript files directly. AI comment limits would also need coordination with the host to avoid spending the budget twice.
+
+No browser companion is implemented here, and a signed-in Remote Control session has not been tested end to end. The restriction is in the current integration, not in drawing Hagemi in a browser. See Google's [Remote Control](https://antigravity.google/docs/remote-control) and [sidecar](https://antigravity.google/docs/sidecars) documentation for the supported host/client model.
 
 ## Development
 
@@ -113,3 +124,5 @@ A model call has to pass every check below. Small moments stay scripted and free
 Calls go through Antigravity's own local language server with your signed-in account, so there is no API key, and they count toward your normal quota. Token counts are estimates, because the endpoint does not report usage. Comments made by AI are marked with ✦, and today's tally is in the settings panel.
 
 Settings are saved to `~/.gemini/antigravity/sidecar_data/hagemi-pet-agy/pet/data/settings.json`.
+
+`quotaHoverDelayMs` controls the quota overlay's hover delay, from 0 to 10,000 milliseconds (default 650). Zero opens it immediately; leaving her or beginning a drag cancels a pending opening. The overlay stays closed while her menu or settings panel is open.

@@ -163,6 +163,8 @@ agy plugin uninstall hagemi-pet-agy
 
 右键点她可以快速调整，选择 **设置…** 可以修改全部选项：语言、大小、动画质量、话量、目光跟随、AI 限制，以及额外的人设说明。双击她可以让她说句话。
 
+**额度悬停延迟**控制鼠标停在她身上多久后打开额度面板，可设为 0–10,000 毫秒，默认 650 毫秒。设为 **0** 即可立即显示。
+
 <p align="center">
 <img src="docs/media/zhs/menu.webp" width="250" alt="右键菜单">&nbsp;&nbsp;&nbsp;
 <img src="docs/media/zhs/settings.webp" width="360" alt="设置面板">
@@ -170,7 +172,7 @@ agy plugin uninstall hagemi-pet-agy
 
 ## 须知
 
-- 她只住在桌面应用里。远程控制的网页端看不到她，但她会在你的电脑上继续关注，回来时状态是最新的。
+- 当前版本住在桌面应用里。使用远程控制时，她会在你的电脑上继续关注；要在网页端显示她，需要另做浏览器扩展或用户脚本。详见[兼容性调查](docs/DEVELOPMENT.md#remote-control)。
 - 她从旁观察，不会拖慢你的代理。
 - 她用到了 Antigravity 未公开的部分，所以 Antigravity 更新后她可能不再出现或不再有反应。应用本身不依赖她。
 - 已在 Windows 上测试。macOS 和 Linux 理论上可用，但还没试过。

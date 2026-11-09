@@ -163,6 +163,8 @@ Excerpts go to the model you selected, which may not be the one the conversation
 
 Right-click her for quick options, or choose **Settings…** for everything: language, size, animation quality, how chatty she is, whether she follows your cursor, the AI limits, and extra notes for her personality. Double-click her to make her say something.
 
+**Quota hover delay** controls how long you hover before the quota overlay opens: 0–10,000 ms, with a default of 650 ms. Set it to **0** to open instantly.
+
 <p align="center">
 <img src="docs/media/menu.webp" width="250" alt="Right-click menu">&nbsp;&nbsp;&nbsp;
 <img src="docs/media/settings.webp" width="360" alt="Settings panel">
@@ -170,7 +172,7 @@ Right-click her for quick options, or choose **Settings…** for everything: lan
 
 ## Good to know
 
-- She lives in the desktop app only. She does not appear in the Remote Control web client, but she keeps watching on your computer and is caught up when you come back.
+- This version lives in the desktop app. She keeps watching on your computer while you use Remote Control, but showing her in its web client would need a separate browser companion. See the [compatibility findings](docs/DEVELOPMENT.md#remote-control).
 - She watches from the side, so she never slows your agents down.
 - She relies on parts of Antigravity that are not officially documented, so an Antigravity update could stop her from appearing or reacting. Nothing else in the app depends on her.
 - Tested on Windows. macOS and Linux should work but have not been tried yet.
