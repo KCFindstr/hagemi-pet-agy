@@ -62,12 +62,14 @@ test('nobody watching, no tokens', async () => {
   assert.equal(modelCalls(calls).length, 0);
 });
 
-test('low quota stops the model, from the bucket or the model itself', async () => {
-  for (const options of [{ quotaLevel: 0.04 }, { modelQuota: 0.03 }]) {
-    const { brain, calls, said } = harness(options);
-    await brain.consider('turn_done_big', context);
-    assert.equal(modelCalls(calls).length, 0);
-    assert.equal(said[0].ai, false);
+test('the 10% quota cutoff applies to both the bucket and the model itself', async () => {
+  for (const source of ['quotaLevel', 'modelQuota']) {
+    for (const level of [0.09, 0.1, 0.101]) {
+      const { brain, calls, said } = harness({ [source]: level });
+      await brain.consider('turn_done_big', context);
+      assert.equal(modelCalls(calls).length, level > 0.1 ? 1 : 0, `${source}: ${level}`);
+      assert.equal(said[0].ai, level > 0.1);
+    }
   }
 });
 
@@ -159,6 +161,30 @@ test('minimal context withholds titles and excerpts', async () => {
   const { brain, calls } = harness({ settings: { ai: { contextLevel: 'minimal' } } });
   await brain.consider('turn_error', { ...context, title: 'SECRET PROJECT', userText: 'SECRET TEXT', agentText: 'SECRET REPLY' });
   assert.ok(!modelCalls(calls)[0].body.prompt.includes('SECRET'));
+});
+
+test('excerpts allow 200 user characters and 1,000 agent characters in either language', async () => {
+  for (const language of ['en', 'zhs']) {
+    for (const extra of [0, 1]) {
+      const userText = `🐈${'喵'.repeat(199 + extra)}`;
+      const agentText = `🐾${'好'.repeat(999 + extra)}`;
+      const { brain, calls } = harness({ language });
+      await brain.consider('turn_error', { ...context, userText, agentText });
+      const { prompt } = modelCalls(calls)[0].body;
+      const user = prompt.match(language === 'zhs' ? /^用户说: (.+)$/m : /^User said: (.+)$/m)[1];
+      const agent = prompt.match(language === 'zhs' ? /^代理说: (.+)$/m : /^Agent said: (.+)$/m)[1];
+      assert.equal(user, `🐈${'喵'.repeat(199)}${extra ? '…' : ''}`);
+      assert.equal(agent, `🐾${'好'.repeat(999)}${extra ? '…' : ''}`);
+    }
+  }
+});
+
+test('titles context withholds excerpts', async () => {
+  const { brain, calls } = harness({ settings: { ai: { contextLevel: 'titles' } } });
+  await brain.consider('turn_error', { ...context, userText: 'PRIVATE REQUEST', agentText: 'PRIVATE REPLY' });
+  const { prompt } = modelCalls(calls)[0].body;
+  assert.match(prompt, /Chat title: Refactor/);
+  assert.ok(!prompt.includes('PRIVATE'));
 });
 
 test('Chinese remarks ask for Chinese', async () => {

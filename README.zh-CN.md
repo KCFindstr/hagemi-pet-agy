@@ -12,8 +12,6 @@
 
 </div>
 
-哈基米是中文社区给 Gemini 起的昵称，也是一个关于猫的梗。所以她是一只猫：你的额度是她囤的小鱼干，每个子代理都是一只迷你版的她。
-
 ## 她陪你一起干活
 
 <table>
@@ -107,7 +105,7 @@
 <td width="300" align="center"><img src="docs/media/zhs/language.webp" width="270" alt="一条英文吐槽"></td>
 <td>
 
-默认跟随 Antigravity 的语言，也可以手动选择。她的性格参考了 B 站创作者笔下俏皮的 Gemini 娘。
+默认跟随 Antigravity 的语言，也可以手动选择。
 
 </td>
 </tr>
@@ -145,7 +143,8 @@ agy plugin uninstall hagemi-pet-agy
 
 - **模型：** Gemini 3.8 Flash (Low)，最省的版本。可以换成你列表里的任何模型。
 - **频率：** 两次吐槽至少间隔 2 分钟，每小时最多 30 次，每天最多 300 次。
-- **时机：** 只在 Antigravity 窗口在前台时调用，该模型额度低于 5% 时不再调用。
+- **Token 预算：** 每天 200,000（估算值，包含提示词和回复）。
+- **时机：** 只在 Antigravity 窗口在前台时调用，该模型额度低于 10% 时不再调用。
 - **重复：** 同样的情况 6 小时内不会再问。
 
 关掉 AI 后，所有手写台词依然都在。
@@ -156,7 +155,7 @@ agy plugin uninstall hagemi-pet-agy
 
 - **只有数字和工具名：** 次数、时长、额度和时间。
 - **加上对话标题。**
-- **再加上简短摘录**（默认）：你最后一句话约 100 字以内，代理最后一句话约 130 字以内。代码块、链接、文件路径、长串字符和形似密钥的内容会先被移除。
+- **再加上简短摘录**（默认）：你最后一句话约 200 字以内，代理最后一句话约 1000 字以内。代码块、链接、文件路径、长串字符和形似密钥的内容会先被移除。
 
 摘录会发给你选的模型，它不一定是当前对话正在用的模型。她只用按键的*时间*来避免打断你，绝不读取按键内容。除了设置和当天用量，什么都不保存。
 
@@ -189,6 +188,6 @@ agy plugin uninstall hagemi-pet-agy
 ## 许可
 
 - **代码：** [MIT](LICENSE)。
-- **美术：** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)，来自 [CrossPet](https://github.com/lokicorvus/crosspet)。这是**非商业、相同方式共享**的协议，带美术素材分发本插件时必须保持非商业。署名和详情见 [NOTICE.md](NOTICE.md)。
+- **美术：** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)，来自 [CrossPet](https://github.com/lokicorvus/crosspet)。
 
-这是非官方同人项目，与 Google 无关。感谢 lokicorvus 和 CrossPet 贡献者的美术，也感谢让 Gemini 娘成为她自己的 B 站创作者们。
+这是非官方同人项目，与 Google 无关。感谢 lokicorvus 和 CrossPet 贡献者的美术！

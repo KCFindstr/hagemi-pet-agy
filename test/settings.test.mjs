@@ -9,12 +9,15 @@ test('defaults match the promises in the README', () => {
   assert.equal(DEFAULTS.ai.model, 'Gemini 3.8 Flash (Low)');
   assert.equal(DEFAULTS.language, 'auto');
   assert.equal(DEFAULTS.ai.enabled, true);
+  assert.equal(DEFAULTS.ai.pauseBelowQuota, 0.1);
+  assert.equal(DEFAULTS.ai.contextLevel, 'snippets');
 });
 
-test('the default budget is generous: about 500 tokens a comment, 300 comments a day', () => {
+test('the default rate and daily token budget match the README', () => {
+  assert.equal(DEFAULTS.ai.minIntervalMin, 2);
+  assert.equal(DEFAULTS.ai.maxPerHour, 30);
   assert.equal(DEFAULTS.ai.maxPerDay, 300);
-  assert.ok(DEFAULTS.ai.dailyTokenBudget >= DEFAULTS.ai.maxPerDay * 500);
-  assert.ok(DEFAULTS.ai.maxPerHour >= 60 / DEFAULTS.ai.minIntervalMin, 'the interval is what limits the rate, not the hourly cap');
+  assert.equal(DEFAULTS.ai.dailyTokenBudget, 200000);
 });
 
 test('old settings files pick up new defaults but keep real choices', () => {
@@ -36,9 +39,16 @@ test('only changes are saved, so later default improvements reach everyone', () 
   const reloaded = new SettingsStore(file);
   assert.equal(reloaded.value.ai.maxPerHour, 9);
   assert.equal(reloaded.value.ai.maxPerDay, DEFAULTS.ai.maxPerDay);
+  assert.equal(reloaded.value.ai.pauseBelowQuota, 0.1);
   // Going back to a default forgets the override.
   reloaded.patch({ ai: { maxPerHour: DEFAULTS.ai.maxPerHour } });
   assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { version: 2, language: 'zhs' });
+});
+
+test('an explicitly saved quota cutoff still overrides the new default', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'hagemi-')), 'settings.json');
+  writeFileSync(file, JSON.stringify({ version: 2, ai: { pauseBelowQuota: 0.05 } }));
+  assert.equal(new SettingsStore(file).value.ai.pauseBelowQuota, 0.05);
 });
 
 test('junk input cannot break her', () => {

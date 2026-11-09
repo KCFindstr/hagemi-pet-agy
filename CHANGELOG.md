@@ -21,7 +21,8 @@
 - She always calls you big cat (大号猫猫) now, and her lines no longer use em dashes.
 - Settings now show credits and licenses, including CrossPet.
 - Quota is now 小鱼干 (dried fish) instead of honey, with a new dish illustration where the pile is the meter.
-- Much more generous AI defaults: every 2 minutes, 30 an hour, 300 a day, about 200,000 tokens a day, pausing below 5% quota. More moments get real comments.
+- Much more generous AI defaults: every 2 minutes, 30 an hour, 300 a day, about 200,000 tokens a day, pausing below 10% quota. More moments get real comments.
+- AI excerpts now allow up to about 200 characters from your last message and 1,000 from the agent's, after scrubbing.
 - Settings files now store only what you changed, so future default improvements reach you. Limits you never touched move to the new defaults.
 
 ## 0.1.0

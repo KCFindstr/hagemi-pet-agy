@@ -2,9 +2,9 @@
 
 ## Two licenses
 
-| What | Where | License |
-| --- | --- | --- |
-| Source code | everything except the art below | [MIT](LICENSE) |
+| What          | Where                                             | License                                                               |
+| ------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
+| Source code   | everything except the art below                   | [MIT](LICENSE)                                                        |
 | Character art | `sidecars/pet/art/`, `assets/`, `docs/poses.webp` | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
 
 The art license is **non-commercial** and **share-alike**. The code can be reused under MIT, but anything
@@ -38,7 +38,7 @@ If you are an original author and object to any of this, please open an issue an
 
 ## Persona
 
-Hagemi's personality draws on running jokes in the Chinese fan community (哈基米, 极其, 人是猫, Nano Banana, and the
+Hagemi's personality draws on running jokes in the Chinese fan community (哈基米, 极其猫, Nano Banana, and the
 AI-girl rivalries seen in Bilibili videos). All dialogue here was written for this project.
 
 ## Trademarks

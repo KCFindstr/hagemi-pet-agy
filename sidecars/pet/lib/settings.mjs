@@ -20,7 +20,7 @@ export const DEFAULTS = Object.freeze({
     maxPerHour: 30,
     maxPerDay: 300,
     dailyTokenBudget: 200000,
-    pauseBelowQuota: 0.05,
+    pauseBelowQuota: 0.1,
     contextLevel: 'snippets',
     onlyWhenFocused: true,
     personaExtra: '',

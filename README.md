@@ -12,8 +12,6 @@ A chibi Gemini catgirl who lives in your [Antigravity](https://antigravity.googl
 
 </div>
 
-Hagemi (哈基米) is what Chinese fans call Gemini, and also a meme about cats. So she is a cat: your quota is her stash of 小鱼干 (dried fish), and every subagent is a tiny copy of her.
-
 ## She works alongside you
 
 <table>
@@ -107,7 +105,7 @@ Hagemi (哈基米) is what Chinese fans call Gemini, and also a meme about cats.
 <td width="300" align="center"><img src="docs/media/language.webp" width="270" alt="A comment in Chinese"></td>
 <td>
 
-She follows Antigravity's language by default, or you can pick one. Her personality takes after the playful Gemini-musume drawn and voiced by Bilibili creators.
+She follows Antigravity's language by default, or you can pick one.
 
 </td>
 </tr>
@@ -145,20 +143,21 @@ The defaults are generous but capped:
 
 - **Model:** Gemini 3.8 Flash (Low), the cheapest. You can pick any model in your list.
 - **How often:** at most one comment every 2 minutes, 30 an hour and 300 a day.
-- **When:** only while the Antigravity window is in front, and never once that model's quota is below 5%.
+- **Token budget:** 200,000 a day (estimated, including prompts and replies).
+- **When:** only while the Antigravity window is in front, and never once that model's quota is below 10%.
 - **Repeats:** never the same situation twice within 6 hours.
 
 Turn AI off and she keeps every hand-written line.
 
 ### What the model sees
 
-Set this under *What she can see*:
+Set this under _What she can see_:
 
 - **Only numbers and tool names:** counts, durations, quota and the time.
 - **Also chat titles.**
-- **Also short excerpts** (default): up to about 100 characters of your last message and 130 of the agent's. Code blocks, links, file paths, long blobs and anything shaped like a credential are removed first.
+- **Also short excerpts** (default): up to about 200 characters of your last message and 1000 of the agent's. Code blocks, links, file paths, long blobs and anything shaped like a credential are removed first.
 
-Excerpts go to the model you selected, which may not be the one the conversation uses. Keystroke *timing* is used to avoid talking over you; the keys themselves are never read. Nothing is stored except her settings and the daily tally.
+Excerpts go to the model you selected, which may not be the one the conversation uses. Keystroke _timing_ is used to avoid talking over you; the keys themselves are never read. Nothing is stored except her settings and the daily tally.
 
 ## Settings
 
@@ -189,6 +188,6 @@ Inspired by [CrossPet](https://github.com/lokicorvus/crosspet) by lokicorvus and
 ## License
 
 - **Code:** [MIT](LICENSE).
-- **Art:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/), from [CrossPet](https://github.com/lokicorvus/crosspet). This is **non-commercial and share-alike**, so distributing this plugin with its art must stay non-commercial. See [NOTICE.md](NOTICE.md) for credits and details.
+- **Art:** [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/), from [CrossPet](https://github.com/lokicorvus/crosspet).
 
-This is an unofficial fan project, not affiliated with Google. Thanks to lokicorvus and the CrossPet contributors for the art, and to the Bilibili creators whose Gemini-musume made her who she is.
+This is an unofficial fan project, not affiliated with Google. Thanks to lokicorvus and the CrossPet contributors for the art!

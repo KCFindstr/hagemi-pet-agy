@@ -350,7 +350,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     field(ui.ai_maxPerHour || 'Max per hour', number(ai.maxPerHour, 0, 60, value => patch({ ai: { maxPerHour: value } })));
     field(ui.ai_maxPerDay || 'Max per day', number(ai.maxPerDay, 0, 500, value => patch({ ai: { maxPerDay: value } })));
     field(ui.ai_dailyTokenBudget || 'Daily token budget', number(ai.dailyTokenBudget, 0, 500000, value => patch({ ai: { dailyTokenBudget: value } })));
-    field(ui.ai_pauseBelowQuota || 'Stop below quota %', number(Math.round((ai.pauseBelowQuota ?? 0.15) * 100), 0, 100, value => patch({ ai: { pauseBelowQuota: value / 100 } })));
+    field(ui.ai_pauseBelowQuota || 'Stop below quota %', number(Math.round((ai.pauseBelowQuota ?? 0.1) * 100), 0, 100, value => patch({ ai: { pauseBelowQuota: value / 100 } })));
     field(ui.ai_onlyWhenFocused || 'Only when focused', check(ai.onlyWhenFocused, value => patch({ ai: { onlyWhenFocused: value } })));
     const persona = document.createElement('textarea');
     persona.rows = 2;

@@ -103,13 +103,12 @@ A model call has to pass every check below. Small moments stay scripted and free
 | Which moments | finished turns, failures, subagents, quota changes, late nights and more, scaled by chattiness | chattiness |
 | Minimum gap between calls | 2 minutes | yes |
 | Calls per hour / per day | 30 / 300 | yes |
-| Estimated tokens per day | 200,000, about 500 per call | yes |
-| Pause when the comment model's quota is low | below 5% | yes |
+| Estimated tokens per day, including prompts and replies | 200,000 | yes |
+| Pause when the comment model's quota is low | below 10% | yes |
+| Excerpts sent with each call | up to about 200 user characters and 1,000 agent characters, scrubbed first | context level |
 | Only when you are looking | window focused and visible | yes |
 | The same situation twice | never within 6 hours | |
 | After a failure | backs off for 2 to 60 minutes, then uses a scripted line | |
-
-Calls go through Antigravity's own local language server with your signed-in account, so there is no API key, and they count toward your normal quota. Token counts are estimates, because the endpoint does not report usage. Comments made by AI are marked with ✦, and today's tally is in the settings panel.
 
 Calls go through Antigravity's own local language server with your signed-in account, so there is no API key, and they count toward your normal quota. Token counts are estimates, because the endpoint does not report usage. Comments made by AI are marked with ✦, and today's tally is in the settings panel.
 

@@ -144,8 +144,8 @@ export class Brain {
     if (context.model) facts.push(`${zh ? '用户选的模型' : 'Selected model'}: ${context.model}`);
     if (ai.contextLevel !== 'minimal' && context.title) facts.push(`${zh ? '对话标题' : 'Chat title'}: ${scrub(context.title, 70)}`);
     if (ai.contextLevel === 'snippets') {
-      if (context.userText) facts.push(`${zh ? '用户说' : 'User said'}: ${scrub(context.userText, 110)}`);
-      if (context.agentText) facts.push(`${zh ? '代理说' : 'Agent said'}: ${scrub(context.agentText, 130)}`);
+      if (context.userText) facts.push(`${zh ? '用户说' : 'User said'}: ${scrub(context.userText, 200)}`);
+      if (context.agentText) facts.push(`${zh ? '代理说' : 'Agent said'}: ${scrub(context.agentText, 1000)}`);
     }
     return { situation: situations[trigger] || trigger, facts };
   }
