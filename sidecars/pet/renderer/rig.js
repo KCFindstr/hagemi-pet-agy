@@ -23,9 +23,13 @@ HAGEMI.createRig = function createRig(canvas, onLost) {
   compile(gl.VERTEX_SHADER, `#version 300 es
     in vec2 position; in vec2 uv; uniform mat3 view; out vec2 vUv;
     void main() { vec3 p = view * vec3(position, 1.0); gl_Position = vec4(p.xy, 0.0, 1.0); vUv = uv; }`);
+  // She is usually drawn two to three times smaller than she is painted, and plain trilinear filtering
+  // blends in a mip level smaller than the screen, which smears her line art. The bias reads a
+  // sharper level; measured against a Lanczos downscale it keeps most of the detail before any
+  // shimmer appears (-1 starts to alias). It only acts when shrinking, never when enlarging.
   compile(gl.FRAGMENT_SHADER, `#version 300 es
     precision mediump float; uniform sampler2D tex; uniform float opacity; in vec2 vUv; out vec4 color;
-    void main() { color = texture(tex, vUv) * opacity; }`);
+    void main() { color = texture(tex, vUv, -0.75) * opacity; }`);
   gl.linkProgram(program);
   gl.useProgram(program);
   const uniforms = { view: gl.getUniformLocation(program, 'view'), tex: gl.getUniformLocation(program, 'tex'), opacity: gl.getUniformLocation(program, 'opacity') };

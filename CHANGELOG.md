@@ -4,6 +4,7 @@
 
 - Added a bilingual 🐾 Check for updates card and right-click shortcut. Optional startup/6-hour checks detect new commits on `main` without requiring GitHub Releases or version bumps.
 - Click ✨ Update me! to fast-forward a clean GitHub-installed copy and restart Hagemi, preserving settings and AI usage. Local edits, custom commits and development copies are protected.
+- Fixed: she looked blurry, most of all at 100% display scale. Her line art is now 30–50% crisper, and she stays sharp after the app moves to a screen with a different scale.
 
 ## 0.1.1
 

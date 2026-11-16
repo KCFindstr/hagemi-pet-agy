@@ -47,7 +47,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
   let ui = {};
   let updateState = { phase: 'idle' }, updateCard = null;
   let hudRows = [];
-  let scale = 0, pixelRatio = 0, spriteW = 0, spriteH = 0;
+  let scale = 0, pixelRatio = 0, screenRatio = 0, spriteW = 0, spriteH = 0;
   let x = 0, y = 0, vx = 0, vy = 0;
   let dragging = null;
   const abort = new AbortController();
@@ -129,13 +129,15 @@ HAGEMI.boot = async function boot(send, options = {}) {
   function applySize() {
     const height = SIZES[settings.size] || SIZES.m;
     scale = height / STAGE.h;
-    pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    screenRatio = window.devicePixelRatio || 1;
+    pixelRatio = Math.min(2, screenRatio);
     spriteW = 500 * scale;
     spriteH = height;
-    const cssW = (STAGE.w + MARGIN * 2) * scale, cssH = (STAGE.h + MARGIN * 2) * scale;
-    const pixelW = Math.round(cssW * pixelRatio), pixelH = Math.round(cssH * pixelRatio);
-    stage.style.width = `${cssW}px`;
-    stage.style.height = `${cssH}px`;
+    // The canvases are sized in whole screen pixels and shown at exactly that size: a canvas
+    // stretched even a fraction of a pixel is resampled by the browser and goes soft.
+    const pixelW = Math.ceil((STAGE.w + MARGIN * 2) * scale * pixelRatio), pixelH = Math.ceil((STAGE.h + MARGIN * 2) * scale * pixelRatio);
+    stage.style.width = `${pixelW / pixelRatio}px`;
+    stage.style.height = `${pixelH / pixelRatio}px`;
     hit.style.left = `${MARGIN * scale}px`;
     hit.style.top = `${MARGIN * scale}px`;
     hit.style.width = `${STAGE.w * scale}px`;
@@ -624,7 +626,11 @@ HAGEMI.boot = async function boot(send, options = {}) {
       if (Math.abs(vx) < 2) vx = 0;
       if (Math.abs(vy) < 2) vy = 0;
     }
-    stage.style.transform = `translate3d(${x - (STAGE.w / 2 + MARGIN) * scale}px, ${y - (STAGE.h / 2 + MARGIN) * scale}px, 0)`;
+    // A window dragged to a screen with another scale need not resize, so the scale is checked here.
+    const ratio = window.devicePixelRatio || 1, snap = value => Math.round(value * ratio) / ratio;
+    if (ratio !== screenRatio) applySize();
+    // Placed on whole screen pixels for the same reason as the canvas size; the steps are too small to see.
+    stage.style.transform = `translate3d(${snap(x - (STAGE.w / 2 + MARGIN) * scale)}px, ${snap(y - (STAGE.h / 2 + MARGIN) * scale)}px, 0)`;
 
     // Persist where she was left, once she has settled.
     if (!dragging && !vx && !vy && (Math.abs(x - savedAt.x) > 1 || Math.abs(y - savedAt.y) > 1)) {
