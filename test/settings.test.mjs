@@ -11,6 +11,7 @@ test('defaults match the promises in the README', () => {
   assert.equal(DEFAULTS.ai.enabled, true);
   assert.equal(DEFAULTS.ai.pauseBelowQuota, 0.1);
   assert.equal(DEFAULTS.ai.contextLevel, 'snippets');
+  assert.equal(DEFAULTS.autoCheckUpdates, true);
 });
 
 test('the default rate and daily token budget match the README', () => {
@@ -67,10 +68,11 @@ test('saved settings survive a restart, and patches merge', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'hagemi-')), 'settings.json');
   const store = new SettingsStore(file);
   store.patch({ language: 'zhs', ai: { maxPerHour: 2 } });
-  store.patch({ size: 'l', position: { x: 0.2, y: 0.4 } });
+  store.patch({ size: 'l', autoCheckUpdates: false, position: { x: 0.2, y: 0.4 } });
   const reloaded = new SettingsStore(file);
   assert.equal(reloaded.value.language, 'zhs');
   assert.equal(reloaded.value.size, 'l');
+  assert.equal(reloaded.value.autoCheckUpdates, false);
   assert.equal(reloaded.value.ai.maxPerHour, 2);
   assert.equal(reloaded.value.ai.model, DEFAULTS.ai.model);
   assert.deepEqual(reloaded.value.position, { x: 0.2, y: 0.4 });

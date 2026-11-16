@@ -70,4 +70,14 @@ HAGEMI.css = `
 .panel-note { color: #6b5b95; }
 .panel-note + .panel-note { margin-top: 5px; }
 .panel-link { color: #7c3aed; margin-right: 12px; }
+.update-card { margin: 10px 0; padding: 10px; border: 1px solid #dfd3fa; border-radius: 12px; background: linear-gradient(135deg, #f3edff, #fff3f7); }
+.update-title { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.update-paw { font-size: 17px; }
+.update-version { margin-left: auto; font-size: 10px; color: #786493; }
+.update-status { margin: 5px 0 8px; }
+.update-reason { margin-bottom: 8px; font-size: 11px; }
+.update-button { width: 100%; border: 1px solid #bba0ec; border-radius: 16px; padding: 7px 10px; background: #ede0ff; color: #58308e; font: inherit; font-weight: 700; cursor: pointer; }
+.update-button:hover:not(:disabled) { background: #e3cefc; }
+.update-button:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+.update-button:disabled { cursor: default; opacity: .7; }
 `;

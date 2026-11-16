@@ -104,6 +104,14 @@ Upload `crops.zip` to the notebook and bring back the zip it downloads. `--impor
 npm run build:under -- --import results.zip --variant s050_a
 ```
 
+## Source updates
+
+The pet's update card uses GitHub's public commits and compare APIs to check `KCFindstr/hagemi-pet-agy` on `main`. GitHub Releases and version bumps are optional: the installed Git commit is the identity, while `plugin.json` supplies the display version. Checks run after 15 seconds and every 6 hours when `autoCheckUpdates` is enabled. Manual checks work with that setting off. GitHub receives only public repository/commit requests, without app credentials or chat data.
+
+Installing is always a button click. Only the installed checkout at `<geminiDir>/config/plugins/hagemi-pet-agy` can update itself; copied installs and development checkouts show guidance. The updater requires Git on PATH, refuses tracked or untracked local changes and divergent history, fetches the exact offered SHA from a fixed upstream URL, then uses `git merge --ff-only`. It rechecks local changes and ancestry after fetching. It never runs `reset --hard`, deletes the plugin, or touches the separate settings/budget directory. After success, the sidecar exits cleanly and `restart_policy: always` reloads its modules and renderer. This uses the existing sidecar restart mechanism rather than an undocumented plugin-update RPC.
+
+`npm run preview` includes simulated **Updates** states and check/install buttons; they never update files. `test/updater.test.mjs` uses temporary Git repositories to verify real fast-forwards, concurrent requests, preservation of local work, failure handling and restart requests.
+
 ## AI comment limits
 
 A model call has to pass every check below. Small moments stay scripted and free.

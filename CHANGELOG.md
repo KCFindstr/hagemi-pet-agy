@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added a bilingual 🐾 Check for updates card and right-click shortcut. Optional startup/6-hour checks detect new commits on `main` without requiring GitHub Releases or version bumps.
+- Click ✨ Update me! to fast-forward a clean GitHub-installed copy and restart Hagemi, preserving settings and AI usage. Local edits, custom commits and development copies are protected.
+
 ## 0.1.1
 
 - Fixed: she vanished about 90 seconds after the app left its home page, such as opening a conversation or Customizations.

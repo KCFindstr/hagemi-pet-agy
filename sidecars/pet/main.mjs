@@ -13,6 +13,7 @@ import { Monitor } from './lib/monitor.mjs';
 import { formatDuration, isResetSoon, levelForModel, parseQuota, quotaEvents, quotaRows, summarize } from './lib/quota.mjs';
 import { readArt } from './lib/renderer-source.mjs';
 import { SettingsStore } from './lib/settings.mjs';
+import { Updater, UPDATE_INTERVAL_MS } from './lib/updater.mjs';
 
 const MINUTE = 60000;
 const log = message => console.log(`[hagemi] ${message}`);
@@ -44,6 +45,18 @@ const ui = () => UI[language()];
 const quotaOptions = () => ({ lowAt: settings.value.quota.lowAt, criticalAt: settings.value.quota.criticalAt, resetSoonMs: settings.value.quota.resetSoonMin * MINUTE });
 
 const bridge = new RendererBridge({ onMessage: onPetMessage, log });
+const updater = new Updater({
+  root: resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'),
+  installedRoot: join(geminiDir, 'config', 'plugins', 'hagemi-pet-agy'),
+  log,
+  onChange: update => bridge.broadcast({ t: 'update', update }),
+  onInstalled: () => {
+    bridge.broadcast({ t: 'react', state: 'happy', gesture: 'hop', burst: 'sparkles' });
+    // The host's restart_policy: always brings her back with the new modules and renderer.
+    setTimeout(shutdown, 1500);
+  },
+});
+updater.local().then(local => updater.publish(local));
 const brain = new Brain({
   ls, budget, models, log,
   getSettings: () => settings.value,
@@ -228,10 +241,20 @@ function onPetMessage(message, session) {
   switch (message.type) {
     case 'ready':
       bridge.post(session, { t: 'hello', settings: settings.value, ui: ui() });
+      bridge.post(session, { t: 'update', update: updater.state });
       lastFactsJson = '';
       publishFacts(true);
       sendModelChoices(session);
       if (!greeted) { greeted = true; setTimeout(greet, 900); }
+      break;
+    case 'panelOpened':
+      bridge.post(session, { t: 'update', update: updater.state });
+      break;
+    case 'update_check':
+      updater.check();
+      break;
+    case 'update_install':
+      updater.install();
       break;
     case 'art':
       bridge.post(session, { t: 'art', name: message.name, data: readArt(message.name) });
@@ -274,6 +297,8 @@ async function sendModelChoices(session) {
 }
 
 const timers = [setInterval(pollQuota, 60000), setInterval(pollModel, 20000), setInterval(ambient, 5 * MINUTE)];
+const checkUpdates = () => { if (settings.value.autoCheckUpdates) updater.check(); };
+timers.push(setTimeout(checkUpdates, 15000), setInterval(checkUpdates, UPDATE_INTERVAL_MS));
 for (const timer of timers) timer.unref?.();
 pollModel().then(pollQuota);
 monitor.start();

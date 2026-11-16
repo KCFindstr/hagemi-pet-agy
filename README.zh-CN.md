@@ -165,6 +165,10 @@ agy plugin uninstall hagemi-pet-agy
 
 **额度悬停延迟**控制鼠标停在她身上多久后打开额度面板，可设为 0–10,000 毫秒，默认 650 毫秒。设为 **0** 即可立即显示。
 
+**🐾 检查更新…** 会打开更新卡片。默认在启动后及每 6 小时检查一次 GitHub，也可以关闭设置中的 **每 6 小时检查更新**，只手动检查。发现更新后，点击 **✨ 帮我更新！**，她会下载并安装更新，然后短暂重启，保留你的设置和 AI 用量。后台检查不会自动安装。
+
+更新通过 Git 哈希识别，不需要修改版本号或创建 GitHub Release。应用内安装更新需要从 GitHub 安装的副本，且 PATH 中可找到 Git。你自行修改过的内容会受到保护；开发目录及通过 `npm run install:local` 复制安装的版本请手动更新。
+
 <p align="center">
 <img src="docs/media/zhs/menu.webp" width="250" alt="右键菜单">&nbsp;&nbsp;&nbsp;
 <img src="docs/media/zhs/settings.webp" width="360" alt="设置面板">

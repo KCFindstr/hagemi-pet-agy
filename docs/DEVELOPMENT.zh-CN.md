@@ -93,6 +93,14 @@ npm run build:under -- --export crops.zip
 npm run build:under -- --import results.zip --variant s050_a
 ```
 
+## 源码更新
+
+更新卡片通过 GitHub 的公开提交与比较 API 检查 `KCFindstr/hagemi-pet-agy` 的 `main` 分支。提交哈希标识实际安装的代码，`plugin.json` 中的版本号只用于显示，因此不要求 GitHub Release 或每次增加版本号。启用 `autoCheckUpdates` 时，在启动 15 秒后及每 6 小时检查一次；关闭后仍可手动检查。请求只包含公开仓库及提交信息，不发送应用凭证或对话数据。
+
+安装始终需要点击按钮。只有位于 `<geminiDir>/config/plugins/hagemi-pet-agy` 的已安装 Git 副本可以自行更新，复制安装和开发目录会显示手动更新说明。更新需要 PATH 中可找到 Git；存在已跟踪或未跟踪的本地修改，或分支历史分叉时会停止。更新器从固定的上游地址取回提示中的确切提交，再次检查本地修改和祖先关系，并通过 `git merge --ff-only` 更新。不会执行 `reset --hard`、删除插件或修改独立的设置及用量目录。成功后 Sidecar 正常退出，由 `restart_policy: always` 重新加载代码和界面，不依赖未公开的插件更新 RPC。
+
+`npm run preview` 包含模拟的 **Updates** 状态及检查、安装按钮，不会更新任何文件。`test/updater.test.mjs` 在临时 Git 仓库中验证实际快进更新、并发请求、本地修改保护、失败处理及重启请求。
+
 ## AI 吐槽的限制
 
 调用模型要通过下面每一项检查。小事依然用写好的台词，不花钱。

@@ -2,12 +2,14 @@
 // A rehearsal stage: runs the pet in any browser with buttons for every state and reaction.
 // No Antigravity needed. Usage: npm run preview, then open http://127.0.0.1:7891
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { rendererSource, readArt } from '../sidecars/pet/lib/renderer-source.mjs';
 import { LINES, UI, fill, pickLine } from '../sidecars/pet/lib/lines.mjs';
 import { quotaRows } from '../sidecars/pet/lib/quota.mjs';
 import { DEFAULTS } from '../sidecars/pet/lib/settings.mjs';
 
 const PORT = Number(process.env.HAGEMI_PREVIEW_PORT || 7891);
+const VERSION = JSON.parse(readFileSync(new URL('../plugin.json', import.meta.url), 'utf8')).version;
 
 // Made-up status rows, built the way the sidecar builds them so the panel reads the same in each language.
 const NOW = Date.now(), HOUR = 3600000;
@@ -32,6 +34,10 @@ button:hover { background: #a78bfa33; }
 window.__hagemiCall = json => {
   const m = JSON.parse(json);
   if (m.type === 'art') { fetch('/art?name=' + encodeURIComponent(m.name)).then(r => r.text()).then(data => window.__hagemiPet ? window.__hagemiPet.receive({ t: 'art', name: m.name, data }) : queue.push({ t: 'art', name: m.name, data })); return; }
+  // Rehearsal only: these messages never touch Git or the installed plugin.
+  if (m.type === 'update_check') { demoUpdate('checking'); setTimeout(() => demoUpdate('available'), 700); return; }
+  if (m.type === 'update_install') { demoUpdate('installing'); setTimeout(() => demoUpdate('installed'), 1200); return; }
+  if (m.type === 'panelOpened') { window.__hagemiPet?.receive({ t: 'update', update: { ...updateDemo } }); return; }
   console.log('[pet]', m);
   if (m.type === 'ready') boot();
 };
@@ -40,6 +46,14 @@ const defaults = ${JSON.stringify(DEFAULTS)};
 const UI = ${JSON.stringify(UI)};
 const SCRIPT = ${JSON.stringify(LINES)};
 const HUD = ${JSON.stringify(HUD)};
+const updateDemo = { phase: 'idle', currentVersion: ${JSON.stringify(VERSION)}, currentSha: '0'.repeat(40), latestSha: '1'.repeat(40), canInstall: true, reason: '' };
+function demoUpdate(phase) {
+  Object.assign(updateDemo, { phase, currentSha: '0'.repeat(40), canInstall: true, reason: '' });
+  if (phase === 'local changes' || phase === 'development') Object.assign(updateDemo, { phase: 'available', canInstall: false, reason: phase === 'local changes' ? 'local_changes' : 'checkout' });
+  if (phase === 'error') updateDemo.reason = 'network';
+  if (phase === 'manual') Object.assign(updateDemo, { canInstall: false, reason: 'no_git', currentSha: '' });
+  window.__hagemiPet?.receive({ t: 'update', update: { ...updateDemo } });
+}
 const lang = () => new URLSearchParams(location.search).get('lang') || 'en';
 const facts = { state: 'idle', quota: 'ok', stashLevel: 0.82, stashLabel: '82%', subagents: 0, hud: HUD[lang()] || HUD.en };
 const push = () => window.__hagemiPet && window.__hagemiPet.receive({ t: 'facts', ...facts });
@@ -55,6 +69,7 @@ const groups = {
   'Speech': ['en', 'zhs', 'ai'],
   'Moments': Object.keys(SCRIPT.en),
   'Theme': ['light', 'dark'],
+  'Updates': ['idle', 'checking', 'available', 'current', 'installing', 'installed', 'error', 'local changes', 'development', 'manual'],
 };
 const lines = { en: 'Four tools in one breath? Fine, I will allow it. Extremely efficient, nya.', zhs: '一口气跑四个工具？行吧，本喵极其极其满意喵~' };
 const groupsEl = document.getElementById('groups');
@@ -75,6 +90,7 @@ function run(name, item) {
   if (name === 'Speech') pet.receive({ t: 'say', text: lines[item === 'ai' ? 'en' : item], ai: item === 'ai', mood: 'smug' });
   if (name === 'Moments') { const entry = SCRIPT[lang()][item]; pet.receive({ t: 'say', text: entry.lines[0], mood: entry.mood, force: true }); }
   if (name === 'Theme') document.documentElement.dataset.theme = item;
+  if (name === 'Updates') demoUpdate(item);
 }
 window.__rehearse = run;
 const initial = new URLSearchParams(location.search).get('theme');

@@ -165,6 +165,10 @@ Right-click her for quick options, or choose **Settings…** for everything: lan
 
 **Quota hover delay** controls how long you hover before the quota overlay opens: 0–10,000 ms, with a default of 650 ms. Set it to **0** to open instantly.
 
+**🐾 Check for updates…** in her right-click menu opens the update card. She checks GitHub on startup and every 6 hours by default; turn off **Check for updates every 6 hours** for manual checks only. When a newer commit on `main` is ready, choose **✨ Update me!** She fetches that exact commit and briefly restarts, keeping your settings and AI tally. Background checks never install anything.
+
+Updates use commit hashes, so a change is detected even without a version bump or GitHub Release. In-app installation needs a GitHub-installed copy and Git on your PATH. Local edits and separate local commits are protected; development checkouts and copies installed with `npm run install:local` should be updated manually.
+
 <p align="center">
 <img src="docs/media/menu.webp" width="250" alt="Right-click menu">&nbsp;&nbsp;&nbsp;
 <img src="docs/media/settings.webp" width="360" alt="Settings panel">

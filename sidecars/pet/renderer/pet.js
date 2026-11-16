@@ -45,6 +45,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
 
   let settings = { language: 'en', size: 'm', hidden: false, muted: false, animation: 'balanced', followCursor: true, quotaHoverDelayMs: 650, position: null };
   let ui = {};
+  let updateState = { phase: 'idle' }, updateCard = null;
   let hudRows = [];
   let scale = 0, pixelRatio = 0, spriteW = 0, spriteH = 0;
   let x = 0, y = 0, vx = 0, vy = 0;
@@ -273,6 +274,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     item(ui.mute || 'Mute comments', () => patch({ muted: !settings.muted }), settings.muted);
     item(ui.ai || 'AI comments', () => patch({ ai: { enabled: !settings.ai?.enabled } }), settings.ai?.enabled);
     item(ui.settings || 'Settings…', () => openPanel());
+    item((updateState.phase === 'available' ? ui.update_available_menu : ui.update_menu) || '🐾 Check for updates…', () => { openPanel(); if (updateState.phase === 'idle') send({ type: 'update_check' }); });
     item(ui.hide || 'Hide for 1 hour', () => patch({ hiddenUntil: Date.now() + 3600000 }));
     menu.classList.add('show');
     const width = menu.offsetWidth, height = menu.offsetHeight;
@@ -290,6 +292,27 @@ HAGEMI.boot = async function boot(send, options = {}) {
 
   // Settings live on the pet: the app offers plugins no way to open a pane on demand.
   let modelChoices = [], usage = null;
+  function renderUpdate() {
+    if (!updateCard) return;
+    updateCard.replaceChildren();
+    const title = make('div', 'update-title', updateCard);
+    make('span', 'update-paw', title).textContent = '🐾';
+    make('b', '', title).textContent = ui.update_title;
+    const version = [updateState.currentVersion && `v${updateState.currentVersion}`, updateState.currentSha?.slice(0, 7)].filter(Boolean).join(' · ');
+    if (version) make('span', 'update-version', title).textContent = version;
+    const status = make('div', 'panel-note update-status', updateCard);
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = ui[`update_status_${updateState.phase}`] || ui.update_status_idle;
+    if (['available', 'manual'].includes(updateState.phase) && updateState.latestSha) status.textContent += ` (${updateState.latestSha.slice(0, 7)})`;
+    if (updateState.reason) make('div', 'panel-note update-reason', updateCard).textContent = ui[`update_reason_${updateState.reason}`] || '';
+    const button = make('button', 'update-button', updateCard);
+    button.type = 'button';
+    const install = updateState.phase === 'available' && updateState.canInstall;
+    button.textContent = install ? ui.update_install : updateState.phase === 'checking' ? ui.update_checking : updateState.phase === 'installing' ? ui.update_installing : updateState.phase === 'installed' ? ui.update_installed : ui.update_check;
+    button.disabled = ['checking', 'installing', 'installed'].includes(updateState.phase);
+    button.addEventListener('click', () => send({ type: install ? 'update_install' : 'update_check' }));
+  }
   function openPanel() {
     panel.replaceChildren();
     const s = settings, ai = settings.ai || {};
@@ -300,6 +323,8 @@ HAGEMI.boot = async function boot(send, options = {}) {
     close.setAttribute('aria-label', ui.close || 'Close');
     close.textContent = '×';
     close.addEventListener('click', closePanel);
+    updateCard = make('div', 'update-card', panel);
+    renderUpdate();
     const section = title => { make('div', 'panel-section', panel).textContent = title; };
     const field = (label, control) => {
       const row = make('label', 'field', panel);
@@ -340,6 +365,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     field(ui.animation || 'Animation', select(s.animation, [['smooth', ui.animation_smooth], ['balanced', ui.animation_balanced], ['saver', ui.animation_saver]], value => patch({ animation: value })));
     field(ui.chattiness || 'Chattiness', select(s.chattiness, [['quiet', ui.chattiness_quiet], ['normal', ui.chattiness_normal], ['chatty', ui.chattiness_chatty]], value => patch({ chattiness: value })));
     field(ui.followCursor || 'Watch the cursor', check(s.followCursor, value => patch({ followCursor: value })));
+    field(ui.autoCheckUpdates, check(s.autoCheckUpdates, value => patch({ autoCheckUpdates: value })));
     field(ui.quotaHoverDelayMs || 'Quota hover delay (ms, 0 = instant)', number(s.quotaHoverDelayMs, 0, 10000, value => patch({ quotaHoverDelayMs: value })));
     field(ui.mute || 'Mute comments', check(s.muted, value => patch({ muted: value })));
     section(ui.section_ai || 'AI comments');
@@ -685,11 +711,16 @@ HAGEMI.boot = async function boot(send, options = {}) {
       case 'settings':
         settings = { ...settings, ...message.settings };
         ui = message.ui || ui;
+        if (panel.classList.contains('show')) { const scroll = panel.scrollTop; openPanel(); panel.scrollTop = scroll; }
         applySize();
         applyVisibility();
         break;
       case 'art':
         receiveArt(message.name, message.data);
+        break;
+      case 'update':
+        updateState = message.update || updateState;
+        renderUpdate();
         break;
       case 'facts':
         if (!sulking) animator.setState(message.state);
