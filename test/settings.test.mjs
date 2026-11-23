@@ -90,3 +90,29 @@ test('docking is remembered with the position', () => {
   assert.equal(value.position.dock, 'left');
   assert.equal(sanitize({ position: { x: 0, y: 0.5, dock: 'sideways' } }).position.dock, undefined);
 });
+
+test('customSizePx, desktopMode, and balance settings sanitize and merge cleanly', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'hagemi-')), 'settings.json');
+  const store = new SettingsStore(file);
+  store.patch({ customSizePx: 40, desktopMode: true, balance: { enabled: true, label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/' } });
+  assert.equal(store.value.customSizePx, 80);
+  assert.equal(store.value.desktopMode, true);
+  assert.equal(store.value.balance.enabled, true);
+  assert.equal(store.value.balance.label, 'DeepSeek');
+  assert.equal(store.value.balance.pollIntervalMin, 15);
+
+  store.patch({ customSizePx: 999, balance: { pollIntervalMin: 5 } });
+  assert.equal(store.value.customSizePx, 500);
+  assert.equal(store.value.balance.label, 'DeepSeek', 'nested balance fields survive partial updates');
+  assert.equal(store.value.balance.pollIntervalMin, 5);
+
+  store.patch({ customSizePx: 0, bubbleScale: 145 });
+  assert.equal(store.value.customSizePx, 0);
+  assert.equal(store.value.bubbleScale, 145);
+  assert.equal(sanitize({ bubbleScale: 20 }).bubbleScale, 60);
+  assert.equal(sanitize({ bubbleScale: 300 }).bubbleScale, 180);
+  assert.equal(sanitize({ bubbleScale: 'bad' }).bubbleScale, 100);
+  assert.equal(sanitize({ customSizePx: 'bad', desktopMode: 'yes', balance: { provider: 'unknown' } }).customSizePx, 0);
+  assert.equal(sanitize({ customSizePx: 'bad', desktopMode: 'yes', balance: { provider: 'unknown' } }).desktopMode, false);
+  assert.equal(sanitize({ balance: { provider: 'unknown' } }).balance.provider, 'auto');
+});
