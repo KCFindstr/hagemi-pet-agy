@@ -40,7 +40,7 @@ HAGEMI.css = `
 .fill[data-tone="bad"] { background: #f43f5e; }
 
 .menu {
-  position: fixed; left: 0; top: 0; min-width: 176px; padding: 5px; background: #fffdfb; color: #2a1b3d;
+  position: fixed; left: 0; top: 0; min-width: 220px; padding: 5px; background: #fffdfb; color: #2a1b3d;
   border: 1px solid #c4b5fd; border-radius: 11px; box-shadow: 0 10px 30px rgba(46, 24, 104, 0.32);
   font: 500 12.5px/1.3 "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
   pointer-events: auto; display: none;
@@ -86,10 +86,9 @@ HAGEMI.css = `
 .slider-track::-webkit-slider-thumb:hover { transform: scale(1.12); background: #7c56b8; }
 .size-reset { border: 1px solid #d9cffb; border-radius: 6px; padding: 2px 7px; background: #faf8ff; color: #5b4390; font: inherit; font-size: 11px; cursor: pointer; }
 .size-reset:hover { background: #ede9fe; }
-.menu-size-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 8px; }
-.menu-mini { border: 1px solid #d9cffb; border-radius: 6px; padding: 2px 9px; background: #faf8ff; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
-.menu-mini:hover { background: #ede9fe; }
-.menu-size-label { font-size: 11.5px; font-variant-numeric: tabular-nums; color: #6b5b95; }
+.menu-sliders { padding: 4px 8px 2px; }
+.menu-sliders .slider-block { margin: 4px 0 8px; }
+.menu-sliders .slider-head { margin-bottom: 6px; }
 .balance-panel {
   position: fixed; left: 0; top: 0; width: 280px; max-height: min(72vh, 480px); overflow: auto; padding: 10px 13px 12px; display: none;
   background: #fffdfb; color: #2a1b3d; border: 1px solid #c4b5fd; border-radius: 13px; box-shadow: 0 12px 36px rgba(46, 24, 104, 0.34);

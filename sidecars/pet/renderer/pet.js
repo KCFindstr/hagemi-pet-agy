@@ -60,7 +60,9 @@ HAGEMI.boot = async function boot(send, options = {}) {
   let x = 0, y = 0, vx = 0, vy = 0;
   let dragging = null;
   let lastOverPet = false, lastInteractive = null;
-  let sizeSlider = null, sizePxText = null, bubbleSlider = null, bubbleValText = null, sizeWheelTimer = 0;
+  let sizeSlider = null, sizePxText = null, bubbleSlider = null, bubbleValText = null;
+  let menuSizeSlider = null, menuSizeVal = null, menuBubbleSlider = null, menuBubbleVal = null;
+  let panelUiTitle = '', sizeWheelTimer = 0;
   const abort = new AbortController();
   const listen = (target, type, handler, extra = {}) => target.addEventListener(type, handler, { signal: abort.signal, ...extra });
 
@@ -157,11 +159,10 @@ HAGEMI.boot = async function boot(send, options = {}) {
   function applyBubbleScale() {
     const pct = clamp(Math.round(Number(settings.bubbleScale) || 100), 60, 180);
     bubble.style.setProperty('--bubble-scale', String(pct / 100));
-    if (bubbleSlider) {
-      bubbleSlider.value = String(pct);
-      setRangeFill(bubbleSlider);
+    for (const [el, label] of [[bubbleSlider, bubbleValText], [menuBubbleSlider, menuBubbleVal]]) {
+      if (el) { el.value = String(pct); setRangeFill(el); }
+      if (label) label.textContent = `${pct}%`;
     }
-    if (bubbleValText) bubbleValText.textContent = `${pct}%`;
     if (speech) placeBubble();
   }
 
@@ -185,11 +186,39 @@ HAGEMI.boot = async function boot(send, options = {}) {
     fx.resize(pixelW, pixelH);
     keepInBounds();
     const pct = pctFromHeight(height);
-    if (sizeSlider) {
-      sizeSlider.value = String(pct);
-      setRangeFill(sizeSlider);
+    for (const [el, label] of [[sizeSlider, sizePxText], [menuSizeSlider, menuSizeVal]]) {
+      if (el) { el.value = String(pct); setRangeFill(el); }
+      if (label) label.textContent = `${pct}%`;
     }
-    if (sizePxText) sizePxText.textContent = `${pct}%`;
+  }
+
+  function createSliderBlock(parent, { label, min, max, step, value, onInput, onCommit, onReset }) {
+    const block = make('div', 'slider-block', parent);
+    const rowHead = make('div', 'slider-head', block);
+    make('span', 'slider-label', rowHead).textContent = label;
+    const valEl = make('span', 'slider-val', rowHead);
+    valEl.textContent = `${value}%`;
+    const resetBtn = make('button', 'slider-default', rowHead);
+    resetBtn.type = 'button';
+    resetBtn.textContent = ui.size_default || 'Default';
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.className = 'slider-track';
+    range.min = String(min);
+    range.max = String(max);
+    range.step = String(step);
+    range.value = String(value);
+    setRangeFill(range);
+    range.addEventListener('input', () => {
+      const nextVal = Number(range.value);
+      valEl.textContent = `${nextVal}%`;
+      setRangeFill(range);
+      onInput(nextVal);
+    });
+    range.addEventListener('change', () => onCommit(Number(range.value)));
+    resetBtn.addEventListener('click', onReset);
+    block.appendChild(range);
+    return { range, valEl };
   }
 
   const viewW = () => window.innerWidth, viewH = () => window.innerHeight;
@@ -336,28 +365,38 @@ HAGEMI.boot = async function boot(send, options = {}) {
     item(ui.language_zhs || '简体中文', () => patch({ language: 'zhs' }), settings.language === 'zhs');
     item(ui.language_auto || 'Follow app language', () => patch({ language: 'auto' }), settings.language === 'auto');
     divider();
-    for (const [key, label] of [['s', ui.size_s || 'Small'], ['m', ui.size_m || 'Medium'], ['l', ui.size_l || 'Large']]) {
-      item(label, () => patch({ size: key, customSizePx: 0 }), !settings.customSizePx && settings.size === key);
-    }
-    const sizeBar = make('div', 'menu-size-row', menu);
-    const minus = make('button', 'menu-mini', sizeBar);
-    minus.type = 'button';
-    minus.textContent = '-';
-    minus.title = ui.size_smaller || 'Smaller';
-    const sizeText = make('span', 'menu-size-label', sizeBar);
-    sizeText.textContent = `${pctFromHeight()}%`;
-    const plus = make('button', 'menu-mini', sizeBar);
-    plus.type = 'button';
-    plus.textContent = '+';
-    plus.title = ui.size_larger || 'Larger';
-    const stepSize = deltaPct => {
-      const nextPct = clamp(Math.round((pctFromHeight() + deltaPct) / 5) * 5, 40, 220);
-      const nextPx = nextPct === 100 ? 0 : Math.round((nextPct / 100) * SIZES.m);
-      sizeText.textContent = `${nextPct}%`;
-      patch({ size: 'm', customSizePx: nextPx });
-    };
-    minus.addEventListener('click', () => stepSize(-10));
-    plus.addEventListener('click', () => stepSize(10));
+    const menuSliders = make('div', 'menu-sliders', menu);
+    const mPet = createSliderBlock(menuSliders, {
+      label: ui.pet_size || 'Pet size',
+      min: 40,
+      max: 220,
+      step: 5,
+      value: pctFromHeight(),
+      onInput: pct => {
+        settings.size = 'm';
+        settings.customSizePx = pct === 100 ? 0 : Math.round((pct / 100) * SIZES.m);
+        applySize();
+      },
+      onCommit: pct => patch({ size: 'm', customSizePx: pct === 100 ? 0 : Math.round((pct / 100) * SIZES.m) }),
+      onReset: () => patch({ size: 'm', customSizePx: 0 }),
+    });
+    menuSizeSlider = mPet.range;
+    menuSizeVal = mPet.valEl;
+    const mBubble = createSliderBlock(menuSliders, {
+      label: ui.bubble_size || 'Bubble size',
+      min: 60,
+      max: 180,
+      step: 5,
+      value: clamp(Math.round(Number(settings.bubbleScale) || 100), 60, 180),
+      onInput: pct => {
+        settings.bubbleScale = pct;
+        applyBubbleScale();
+      },
+      onCommit: pct => patch({ bubbleScale: pct }),
+      onReset: () => patch({ bubbleScale: 100 }),
+    });
+    menuBubbleSlider = mBubble.range;
+    menuBubbleVal = mBubble.valEl;
     divider();
     item(settings.desktopMode ? (ui.desktop_mode_exit || '🪟 Return inside app') : (ui.desktop_mode_enter || '🖥️ Float on desktop'), () => patch({ desktopMode: !settings.desktopMode }), settings.desktopMode);
     item(ui.mute || 'Mute comments', () => patch({ muted: !settings.muted }), settings.muted);
@@ -370,7 +409,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     menu.style.transform = `translate3d(${clamp(px, 6, viewW() - width - 6)}px, ${clamp(py, 6, viewH() - height - 6)}px, 0)`;
     syncDesktopHit();
   }
-  function closeMenu() { menu.classList.remove('show'); syncDesktopHit(); }
+  function closeMenu() { menu.classList.remove('show'); menuSizeSlider = null; menuSizeVal = null; menuBubbleSlider = null; menuBubbleVal = null; syncDesktopHit(); }
 
   function renderBalancePanel() {
     if (!balancePanel.classList.contains('show')) return;
@@ -535,37 +574,9 @@ HAGEMI.boot = async function boot(send, options = {}) {
       control.addEventListener('change', () => onChange(control.value));
       return control;
     };
-    const sliderBlock = ({ label, min, max, step, value, onInput, onCommit, onReset }) => {
-      const block = make('div', 'slider-block', panel);
-      const rowHead = make('div', 'slider-head', block);
-      make('span', 'slider-label', rowHead).textContent = label;
-      const valEl = make('span', 'slider-val', rowHead);
-      valEl.textContent = `${value}%`;
-      const resetBtn = make('button', 'slider-default', rowHead);
-      resetBtn.type = 'button';
-      resetBtn.textContent = ui.size_default || 'Default';
-      const range = document.createElement('input');
-      range.type = 'range';
-      range.className = 'slider-track';
-      range.min = String(min);
-      range.max = String(max);
-      range.step = String(step);
-      range.value = String(value);
-      setRangeFill(range);
-      range.addEventListener('input', () => {
-        const nextVal = Number(range.value);
-        valEl.textContent = `${nextVal}%`;
-        setRangeFill(range);
-        onInput(nextVal);
-      });
-      range.addEventListener('change', () => onCommit(Number(range.value)));
-      resetBtn.addEventListener('click', onReset);
-      block.appendChild(range);
-      return { range, valEl };
-    };
     section(ui.section_pet || 'Pet');
     field(ui.language || 'Language', select(s.language, [['auto', ui.language_auto], ['en', ui.language_en], ['zhs', ui.language_zhs]], value => patch({ language: value })));
-    const petCtrl = sliderBlock({
+    const petCtrl = createSliderBlock(panel, {
       label: ui.pet_size || 'Pet size',
       min: 40,
       max: 220,
@@ -581,7 +592,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     });
     sizeSlider = petCtrl.range;
     sizePxText = petCtrl.valEl;
-    const bubbleCtrl = sliderBlock({
+    const bubbleCtrl = createSliderBlock(panel, {
       label: ui.bubble_size || 'Bubble size',
       min: 60,
       max: 180,
@@ -658,6 +669,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
       link.rel = 'noopener noreferrer';
       link.textContent = ui[key] || href;
     }
+    panelUiTitle = ui.settings_title || '';
     panel.classList.add('show');
     placeDialog(panel);
     syncDesktopHit();
@@ -1013,8 +1025,8 @@ HAGEMI.boot = async function boot(send, options = {}) {
         mergeSettings(message.settings);
         ui = message.ui || ui;
         const active = root.activeElement;
-        const isTyping = active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && ['text', 'password', 'number'].includes(active.type)));
-        if (panel.classList.contains('show') && !isTyping) {
+        const isInteracting = active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && ['text', 'password', 'number', 'range'].includes(active.type)));
+        if (panel.classList.contains('show') && !isInteracting && (ui.settings_title || '') !== panelUiTitle) {
           const scroll = panel.scrollTop;
           openPanel();
           panel.scrollTop = scroll;
