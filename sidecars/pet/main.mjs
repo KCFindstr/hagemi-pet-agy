@@ -6,11 +6,14 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Brain, Budget, ModelResolver } from './lib/brain.mjs';
 import { RendererBridge } from './lib/cdp.mjs';
+import { fetchThirdPartyBalance } from './lib/balance.mjs';
+import { DesktopBridge } from './lib/desktop-bridge.mjs';
+import { DesktopHost } from './lib/desktop-host.mjs';
 import { ambientTriggers, chooseState, classifyTurnEnd, festival, isLate, modelFamily, REACTIONS, timeOfDay } from './lib/director.mjs';
 import { fill, resolveLanguage, UI } from './lib/lines.mjs';
 import { LanguageServer } from './lib/ls-client.mjs';
 import { Monitor } from './lib/monitor.mjs';
-import { formatDuration, isResetSoon, levelForModel, parseQuota, quotaEvents, quotaRows, summarize } from './lib/quota.mjs';
+import { formatBalanceSpeech, formatDuration, isResetSoon, levelForModel, parseQuota, quotaEvents, quotaRows, summarize } from './lib/quota.mjs';
 import { readArt } from './lib/renderer-source.mjs';
 import { SettingsStore } from './lib/settings.mjs';
 import { Updater, UPDATE_INTERVAL_MS } from './lib/updater.mjs';
@@ -31,10 +34,14 @@ const budget = new Budget(join(dataDir, 'budget.json'));
 const ls = new LanguageServer();
 const models = new ModelResolver(ls);
 
+const pluginRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 let appLanguage = 'en';
 let facts = { running: 0, subagents: 0, category: null, idleMs: 0, quietMs: 0, connected: false };
 let quota = { level: null, mood: 'ok', buckets: [], resetInMs: null };
 let allBuckets = [];
+let thirdPartyBalance = null;
+let lastBalancePollAt = 0;
+let desktopStatus = { status: 'idle', reason: '' };
 let presence = { visible: true, focused: true, idleMs: 0 };
 let selectedModel = null;
 let activeSince = null, lastToolAt = 0;
@@ -45,13 +52,58 @@ const ui = () => UI[language()];
 const quotaOptions = () => ({ lowAt: settings.value.quota.lowAt, criticalAt: settings.value.quota.criticalAt, resetSoonMs: settings.value.quota.resetSoonMin * MINUTE });
 
 const bridge = new RendererBridge({ onMessage: onPetMessage, log });
+const desktopBridge = new DesktopBridge({
+  onMessage: onPetMessage,
+  onConnectionChange: () => syncSuppressed(),
+  log,
+});
+const desktopHost = new DesktopHost({
+  pluginRoot,
+  onStatus: status => {
+    desktopStatus = status;
+    broadcastAll({ t: 'desktop_status', status });
+  },
+  log,
+});
+
+function sendTo(session, message) {
+  if (session?.desktop) desktopBridge.post(session, message);
+  else bridge.post(session, message);
+}
+
+function broadcastAll(message) {
+  bridge.broadcast(message);
+  desktopBridge.broadcast(message);
+}
+
+function syncSuppressed() {
+  bridge.broadcast({ t: 'suppressed', suppressed: desktopBridge.hasClients() });
+}
+
+let desktopSyncQueue = Promise.resolve();
+function queueDesktopSync() {
+  desktopSyncQueue = desktopSyncQueue.then(async () => {
+    if (stopping) return;
+    if (settings.value.desktopMode) {
+      const { url } = await desktopBridge.start();
+      const ok = await desktopHost.start(url, { customPath: settings.value.desktopElectronPath });
+      if (!ok) syncSuppressed();
+    } else {
+      await desktopHost.stop();
+      await desktopBridge.stop();
+      syncSuppressed();
+    }
+  }).catch(error => log(`desktop sync: ${error.message}`));
+  return desktopSyncQueue;
+}
+
 const updater = new Updater({
-  root: resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'),
+  root: pluginRoot,
   installedRoot: join(geminiDir, 'config', 'plugins', 'hagemi-pet-agy'),
   log,
-  onChange: update => bridge.broadcast({ t: 'update', update }),
+  onChange: update => broadcastAll({ t: 'update', update }),
   onInstalled: () => {
-    bridge.broadcast({ t: 'react', state: 'happy', gesture: 'hop', burst: 'sparkles' });
+    broadcastAll({ t: 'react', state: 'happy', gesture: 'hop', burst: 'sparkles' });
     // The host's restart_policy: always brings her back with the new modules and renderer.
     setTimeout(shutdown, 1500);
   },
@@ -65,13 +117,22 @@ const brain = new Brain({
   // Comments are paid for by their own model, not by the one selected for the agent.
   getQuotaLevel: () => levelForModel(allBuckets, models.resolve(settings.value.ai.model)?.label || settings.value.ai.model),
   say: (result, trigger) => {
-    bridge.broadcast({ t: 'say', text: result.text, mood: result.mood, ai: result.ai, force: trigger === 'greet' });
+    broadcastAll({ t: 'say', text: result.text, mood: result.mood, ai: result.ai, force: trigger === 'greet' });
     if (process.env.HAGEMI_DEBUG) log(`${trigger}${result.ai ? ' (ai)' : ''}: ${result.text}`);
   },
 });
 
 function hudRows() {
-  const strings = ui(), rows = quotaRows(quota.buckets, strings, language());
+  const strings = ui();
+  const sourceBuckets = allBuckets.length ? allBuckets : quota.buckets;
+  const rows = quotaRows(sourceBuckets, strings, language());
+  if (settings.value.balance.enabled) {
+    const label = thirdPartyBalance?.label || settings.value.balance.label || strings.hud_balance;
+    const value = thirdPartyBalance
+      ? (thirdPartyBalance.ok ? thirdPartyBalance.display : fill(strings.balance_failed, { error: thirdPartyBalance.error }))
+      : strings.balance_refreshing;
+    rows.push({ label, value });
+  }
   rows.push({ label: strings.hud_agents, value: facts.subagents ? fill(strings.hud_subagents, facts) : facts.running ? fill(strings.hud_running, facts) : strings.hud_idle });
   const usage = budget.usage;
   if (settings.value.ai.enabled) rows.push({ label: strings.hud_comments, value: `${usage.calls}/${settings.value.ai.maxPerDay} · ~${usage.tokens}` });
@@ -96,13 +157,13 @@ function publishFacts(force = false) {
   }
   if (force || json !== lastFactsJson) {
     lastFactsJson = json;
-    bridge.broadcast(message);
-  } else bridge.broadcast({ t: 'heartbeat' });
+    broadcastAll(message);
+  } else broadcastAll({ t: 'heartbeat' });
 }
 
 function act(trigger) {
   const reaction = REACTIONS[trigger]?.react;
-  if (reaction) bridge.broadcast({ t: 'react', ...reaction });
+  if (reaction) broadcastAll({ t: 'react', ...reaction });
 }
 
 function context(extra = {}) {
@@ -218,11 +279,28 @@ async function pollModel() {
   } catch { /* The state file format is the app's own; she just goes without opinions. */ }
 }
 
+async function pollBalance() {
+  if (!settings.value.balance.enabled) {
+    thirdPartyBalance = null;
+    lastBalancePollAt = 0;
+    publishFacts();
+    return null;
+  }
+  lastBalancePollAt = Date.now();
+  try {
+    thirdPartyBalance = await fetchThirdPartyBalance(settings.value.balance);
+  } catch {
+    thirdPartyBalance = { ok: false, label: settings.value.balance.label || 'API', display: '', amount: null, currency: settings.value.balance.currency, detail: '', error: 'network_error', updatedAt: Date.now() };
+  }
+  publishFacts();
+  return thirdPartyBalance;
+}
+
 function greet() {
   const now = new Date();
   const fest = festival(now);
   const scene = fest || `greet_${timeOfDay(now)}`;
-  bridge.broadcast({ t: 'react', state: scene, ms: 4200, gesture: 'hop', burst: 'sparkles' });
+  broadcastAll({ t: 'react', state: scene, ms: 4200, gesture: 'hop', burst: 'sparkles' });
   brain.consider('greet', {}, { line: scene }).catch(() => {});
 }
 
@@ -240,15 +318,23 @@ let greeted = false;
 function onPetMessage(message, session) {
   switch (message.type) {
     case 'ready':
-      bridge.post(session, { t: 'hello', settings: settings.value, ui: ui() });
-      bridge.post(session, { t: 'update', update: updater.state });
+      sendTo(session, {
+        t: 'hello',
+        settings: settings.value,
+        ui: ui(),
+        desktopStatus,
+        suppressed: !session?.desktop && desktopBridge.hasClients(),
+      });
+      sendTo(session, { t: 'update', update: updater.state });
       lastFactsJson = '';
       publishFacts(true);
       sendModelChoices(session);
+      if (session?.desktop) syncSuppressed();
       if (!greeted) { greeted = true; setTimeout(greet, 900); }
       break;
     case 'panelOpened':
-      bridge.post(session, { t: 'update', update: updater.state });
+      sendTo(session, { t: 'update', update: updater.state });
+      sendTo(session, { t: 'desktop_status', status: desktopStatus });
       break;
     case 'update_check':
       updater.check();
@@ -257,12 +343,35 @@ function onPetMessage(message, session) {
       updater.install();
       break;
     case 'art':
-      bridge.post(session, { t: 'art', name: message.name, data: readArt(message.name) });
+      sendTo(session, { t: 'art', name: message.name, data: readArt(message.name) });
+      break;
+    case 'query_balance':
+      Promise.all([pollQuota(), pollBalance()]).then(() => {
+        const tp = thirdPartyBalance ? { ...thirdPartyBalance, enabled: settings.value.balance.enabled } : { enabled: settings.value.balance.enabled, ok: false };
+        broadcastAll({
+          t: 'balance_report',
+          rows: hudRows(),
+          thirdParty: tp,
+          updatedAt: Date.now(),
+        });
+        if (message.speak) {
+          const text = formatBalanceSpeech(allBuckets, tp, ui(), language());
+          broadcastAll({ t: 'say', text, mood: 'happy', ai: false, force: true });
+        }
+      }).catch(() => {});
       break;
     case 'settings': {
-      const before = settings.value.language;
+      const beforeDesktop = settings.value.desktopMode;
+      const beforeElectron = settings.value.desktopElectronPath;
+      const beforeBalance = JSON.stringify(settings.value.balance);
       settings.patch(message.patch);
-      if (settings.value.language !== before) bridge.broadcast({ t: 'settings', settings: settings.value, ui: ui() });
+      broadcastAll({ t: 'settings', settings: settings.value, ui: ui() });
+      if (settings.value.desktopMode !== beforeDesktop || settings.value.desktopElectronPath !== beforeElectron) {
+        queueDesktopSync();
+      }
+      if (JSON.stringify(settings.value.balance) !== beforeBalance) {
+        pollBalance();
+      }
       publishFacts();
       break;
     }
@@ -271,7 +380,7 @@ function onPetMessage(message, session) {
       if (message.language) appLanguage = message.language;
       break;
     case 'remount':
-      bridge.remount(session);
+      if (!session?.desktop) bridge.remount(session);
       break;
     case 'talk':
       brain.consider('talk', context(), { force: true, line: 'talk_offline' }).catch(() => {});
@@ -292,17 +401,28 @@ function onPetMessage(message, session) {
 async function sendModelChoices(session) {
   try {
     const configs = await models.refresh();
-    bridge.post(session, { t: 'models', models: configs.map(c => c.label), usage: budget.usage });
+    sendTo(session, { t: 'models', models: configs.map(c => c.label), usage: budget.usage });
   } catch { /* The picker falls back to a free-text field. */ }
 }
 
-const timers = [setInterval(pollQuota, 60000), setInterval(pollModel, 20000), setInterval(ambient, 5 * MINUTE)];
+const timers = [
+  setInterval(pollQuota, 60000),
+  setInterval(pollModel, 20000),
+  setInterval(ambient, 5 * MINUTE),
+  setInterval(() => {
+    if (settings.value.balance.enabled && Date.now() - lastBalancePollAt >= settings.value.balance.pollIntervalMin * MINUTE) {
+      pollBalance();
+    }
+  }, 60000),
+];
 const checkUpdates = () => { if (settings.value.autoCheckUpdates) updater.check(); };
 timers.push(setTimeout(checkUpdates, 15000), setInterval(checkUpdates, UPDATE_INTERVAL_MS));
 for (const timer of timers) timer.unref?.();
 pollModel().then(pollQuota);
+if (settings.value.balance.enabled) pollBalance();
 monitor.start();
 bridge.start();
+if (settings.value.desktopMode) queueDesktopSync();
 log(`started, data in ${dataDir}`);
 
 // Keep the process alive even when every timer above is unreferenced.
@@ -316,6 +436,8 @@ async function shutdown() {
   monitor.stop();
   const force = setTimeout(() => process.exit(0), 2000);
   force.unref?.();
+  await desktopHost.stop();
+  await desktopBridge.stop();
   await bridge.stop();
   process.exit(0);
 }

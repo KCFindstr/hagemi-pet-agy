@@ -36,6 +36,8 @@ HAGEMI.boot = async function boot(send, options = {}) {
   menu.setAttribute('role', 'menu');
   const panel = make('div', 'panel');
   panel.setAttribute('role', 'dialog');
+  const balancePanel = make('div', 'balance-panel');
+  balancePanel.setAttribute('role', 'dialog');
 
   let leaving = 0, running = true;
   const rig = HAGEMI.createRig(glCanvas, () => { if (running) { dispose(); send({ type: 'remount' }); } });
@@ -43,13 +45,22 @@ HAGEMI.boot = async function boot(send, options = {}) {
   const fx = HAGEMI.createFx(backCanvas, frontCanvas);
   const animator = HAGEMI.createAnimator(fx);
 
-  let settings = { language: 'en', size: 'm', hidden: false, muted: false, animation: 'balanced', followCursor: true, quotaHoverDelayMs: 650, position: null };
+  let settings = {
+    language: 'en', size: 'm', customSizePx: 0, desktopMode: false, desktopElectronPath: '',
+    hidden: false, muted: false, animation: 'balanced', followCursor: true, quotaHoverDelayMs: 650, position: null,
+    balance: { enabled: false, provider: 'auto', label: 'API', baseUrl: '', apiKey: '', currency: '¥', jsonPath: '', pollIntervalMin: 15 },
+  };
   let ui = {};
   let updateState = { phase: 'idle' }, updateCard = null;
+  let desktopStatus = { status: 'idle', reason: '' }, desktopNote = null;
+  let suppressed = false;
+  let balanceState = { loading: false, rows: [], thirdParty: null, updatedAt: 0 };
   let hudRows = [];
   let scale = 0, pixelRatio = 0, screenRatio = 0, spriteW = 0, spriteH = 0;
   let x = 0, y = 0, vx = 0, vy = 0;
   let dragging = null;
+  let lastOverPet = false, lastInteractive = null;
+  let sizeSlider = null, sizePxText = null, sizeWheelTimer = 0;
   const abort = new AbortController();
   const listen = (target, type, handler, extra = {}) => target.addEventListener(type, handler, { signal: abort.signal, ...extra });
 
@@ -126,8 +137,14 @@ HAGEMI.boot = async function boot(send, options = {}) {
     });
   }
 
+  function currentHeightPx() {
+    const custom = Number(settings.customSizePx);
+    if (Number.isFinite(custom) && custom >= 80 && custom <= 500) return Math.round(custom);
+    return SIZES[settings.size] || SIZES.m;
+  }
+
   function applySize() {
-    const height = SIZES[settings.size] || SIZES.m;
+    const height = currentHeightPx();
     scale = height / STAGE.h;
     screenRatio = window.devicePixelRatio || 1;
     pixelRatio = Math.min(2, screenRatio);
@@ -145,6 +162,8 @@ HAGEMI.boot = async function boot(send, options = {}) {
     rig.resize(pixelW, pixelH);
     fx.resize(pixelW, pixelH);
     keepInBounds();
+    if (sizeSlider) sizeSlider.value = String(height);
+    if (sizePxText) sizePxText.textContent = `${height}px`;
   }
 
   const viewW = () => window.innerWidth, viewH = () => window.innerHeight;
@@ -248,8 +267,27 @@ HAGEMI.boot = async function boot(send, options = {}) {
     hud.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }
   let hoverTimer = 0;
-  function showHud() { if (hudRows.length && !dragging && !menu.classList.contains('show') && !panel.classList.contains('show')) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showStash: true }); } }
+  function showHud() { if (hudRows.length && !dragging && !menu.classList.contains('show') && !panel.classList.contains('show') && !balancePanel.classList.contains('show')) { renderHud(); hud.classList.add('show'); placeHud(); animator.setMood({ showStash: true }); } }
   function hideHud() { hud.classList.remove('show'); animator.setMood({ showStash: false }); }
+
+  function syncDesktopHit(overPet = lastOverPet) {
+    lastOverPet = !!overPet;
+    if (!options.desktop) return;
+    const interactive = !!(
+      dragging ||
+      menu.classList.contains('show') ||
+      panel.classList.contains('show') ||
+      balancePanel.classList.contains('show') ||
+      lastOverPet ||
+      bubble.matches(':hover')
+    );
+    if (interactive !== lastInteractive) {
+      lastInteractive = interactive;
+      send({ type: 'hit', interactive });
+    }
+  }
+  listen(bubble, 'pointerenter', () => syncDesktopHit(lastOverPet));
+  listen(bubble, 'pointerleave', () => syncDesktopHit(lastOverPet));
 
   function openMenu(px, py) {
     // The status panel would open behind the menu once the hover delay ran out.
@@ -266,13 +304,35 @@ HAGEMI.boot = async function boot(send, options = {}) {
     const divider = () => make('div', 'divider', menu);
     item(ui.talk || 'Say something', () => send({ type: 'talk' }));
     item(ui.pat || 'Pat her head', () => petted());
+    item(ui.check_balance || '💰 Check quota & balance…', () => openBalancePanel(true));
     divider();
     item(ui.language_en || 'English', () => patch({ language: 'en' }), settings.language === 'en');
     item(ui.language_zhs || '简体中文', () => patch({ language: 'zhs' }), settings.language === 'zhs');
     item(ui.language_auto || 'Follow app language', () => patch({ language: 'auto' }), settings.language === 'auto');
     divider();
-    for (const [key, label] of [['s', ui.size_s || 'Small'], ['m', ui.size_m || 'Medium'], ['l', ui.size_l || 'Large']]) item(label, () => patch({ size: key }), settings.size === key);
+    for (const [key, label] of [['s', ui.size_s || 'Small'], ['m', ui.size_m || 'Medium'], ['l', ui.size_l || 'Large']]) {
+      item(label, () => patch({ size: key, customSizePx: 0 }), !settings.customSizePx && settings.size === key);
+    }
+    const sizeBar = make('div', 'menu-size-row', menu);
+    const minus = make('button', 'menu-mini', sizeBar);
+    minus.type = 'button';
+    minus.textContent = '-';
+    minus.title = ui.size_smaller || 'Smaller';
+    const sizeText = make('span', 'menu-size-label', sizeBar);
+    sizeText.textContent = `${currentHeightPx()}px`;
+    const plus = make('button', 'menu-mini', sizeBar);
+    plus.type = 'button';
+    plus.textContent = '+';
+    plus.title = ui.size_larger || 'Larger';
+    const stepSize = delta => {
+      const nextPx = clamp(Math.round((currentHeightPx() + delta) / 5) * 5, 80, 500);
+      sizeText.textContent = `${nextPx}px`;
+      patch({ customSizePx: nextPx });
+    };
+    minus.addEventListener('click', () => stepSize(-20));
+    plus.addEventListener('click', () => stepSize(20));
     divider();
+    item(settings.desktopMode ? (ui.desktop_mode_exit || '🪟 Return inside app') : (ui.desktop_mode_enter || '🖥️ Float on desktop'), () => patch({ desktopMode: !settings.desktopMode }), settings.desktopMode);
     item(ui.mute || 'Mute comments', () => patch({ muted: !settings.muted }), settings.muted);
     item(ui.ai || 'AI comments', () => patch({ ai: { enabled: !settings.ai?.enabled } }), settings.ai?.enabled);
     item(ui.settings || 'Settings…', () => openPanel());
@@ -281,19 +341,97 @@ HAGEMI.boot = async function boot(send, options = {}) {
     menu.classList.add('show');
     const width = menu.offsetWidth, height = menu.offsetHeight;
     menu.style.transform = `translate3d(${clamp(px, 6, viewW() - width - 6)}px, ${clamp(py, 6, viewH() - height - 6)}px, 0)`;
+    syncDesktopHit();
   }
-  function closeMenu() { menu.classList.remove('show'); }
+  function closeMenu() { menu.classList.remove('show'); syncDesktopHit(); }
+
+  function renderBalancePanel() {
+    if (!balancePanel.classList.contains('show')) return;
+    balancePanel.replaceChildren();
+    const head = make('div', 'panel-head', balancePanel);
+    make('b', '', head).textContent = ui.balance_title || 'Quota & Balance';
+    const close = make('button', 'panel-close', head);
+    close.type = 'button';
+    close.setAttribute('aria-label', ui.close || 'Close');
+    close.textContent = '×';
+    close.addEventListener('click', closeBalancePanel);
+
+    const list = make('div', 'balance-list', balancePanel);
+    const rows = balanceState.rows.length ? balanceState.rows : hudRows;
+    if (!rows.length) {
+      make('div', 'panel-note', list).textContent = balanceState.loading ? (ui.balance_refreshing || 'Checking…') : (ui.balance_empty || 'No data yet.');
+    } else {
+      for (const row of rows) {
+        if (row.level == null && row.value === '') {
+          make('div', 'balance-group', list).textContent = row.label;
+          continue;
+        }
+        const line = make('div', 'balance-row', list);
+        make('span', 'label', line).textContent = row.label;
+        if (row.level != null) {
+          const meter = make('span', 'meter', line);
+          const fill = make('span', 'fill', meter);
+          fill.style.width = `${Math.round(row.level * 100)}%`;
+          fill.dataset.tone = row.level < 0.1 ? 'bad' : row.level < 0.25 ? 'warn' : 'ok';
+        }
+        make('span', 'value', line).textContent = row.value;
+      }
+    }
+
+    const foot = make('div', 'balance-foot', balancePanel);
+    const meta = make('span', 'balance-meta', foot);
+    if (balanceState.loading) {
+      meta.textContent = ui.balance_refreshing || 'Checking…';
+    } else if (balanceState.updatedAt) {
+      const time = new Date(balanceState.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      meta.textContent = (ui.balance_updated || 'Updated at {time}').replace('{time}', time);
+    }
+    const refreshBtn = make('button', 'size-reset', foot);
+    refreshBtn.type = 'button';
+    refreshBtn.textContent = ui.balance_refresh || 'Refresh';
+    refreshBtn.disabled = balanceState.loading;
+    refreshBtn.addEventListener('click', () => {
+      balanceState.loading = true;
+      renderBalancePanel();
+      send({ type: 'query_balance', speak: true });
+    });
+  }
+
+  function placeDialog(el) {
+    const width = el.offsetWidth, height = el.offsetHeight;
+    const left = x + spriteW * 0.5 + width + 10 < viewW() ? x + spriteW * 0.5 : Math.max(8, x - spriteW * 0.5 - width);
+    el.style.transform = `translate3d(${clamp(left, 8, viewW() - width - 8)}px, ${clamp(y - height / 2, 8, Math.max(8, viewH() - height - 8))}px, 0)`;
+  }
+
+  function openBalancePanel(speak = false) {
+    closeMenu();
+    closePanel();
+    balanceState.loading = true;
+    balancePanel.classList.add('show');
+    renderBalancePanel();
+    placeDialog(balancePanel);
+    syncDesktopHit();
+    send({ type: 'query_balance', speak });
+  }
+  function closeBalancePanel() { balancePanel.classList.remove('show'); syncDesktopHit(); }
+
   // A closed shadow root hides its insides from the window, so clicks are told apart in two places:
   // the window only sees clicks elsewhere in the app, and the root sees which of her parts was hit.
-  listen(window, 'pointerdown', event => { if (!event.composedPath().includes(host)) { closeMenu(); closePanel(); } }, { capture: true });
+  listen(window, 'pointerdown', event => { if (!event.composedPath().includes(host)) { closeMenu(); closePanel(); closeBalancePanel(); } }, { capture: true });
   listen(root, 'pointerdown', event => {
     const path = event.composedPath();
     if (!path.includes(menu)) closeMenu();
     if (!path.includes(panel) && !path.includes(menu)) closePanel();
+    if (!path.includes(balancePanel) && !path.includes(menu)) closeBalancePanel();
   }, { capture: true });
 
   // Settings live on the pet: the app offers plugins no way to open a pane on demand.
   let modelChoices = [], usage = null;
+  function renderDesktopStatus() {
+    if (!desktopNote) return;
+    const base = ui[`desktop_status_${desktopStatus.status}`] || ui.desktop_status_idle || '';
+    desktopNote.textContent = desktopStatus.reason && desktopStatus.status === 'error' ? `${base} (${desktopStatus.reason})` : base;
+  }
   function renderUpdate() {
     if (!updateCard) return;
     updateCard.replaceChildren();
@@ -317,7 +455,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
   }
   function openPanel() {
     panel.replaceChildren();
-    const s = settings, ai = settings.ai || {};
+    const s = settings, ai = settings.ai || {}, bal = settings.balance || {};
     const head = make('div', 'panel-head', panel);
     make('b', '', head).textContent = ui.settings_title || 'Hagemi settings';
     const close = make('button', 'panel-close', head);
@@ -361,15 +499,72 @@ HAGEMI.boot = async function boot(send, options = {}) {
       control.addEventListener('change', () => onChange(Number(control.value)));
       return control;
     };
+    const textInput = (value, { placeholder = '', secret = false, maxLength = 300, onChange }) => {
+      const control = document.createElement('input');
+      control.type = secret ? 'password' : 'text';
+      control.value = value || '';
+      control.placeholder = placeholder;
+      control.maxLength = maxLength;
+      control.addEventListener('change', () => onChange(control.value));
+      return control;
+    };
     section(ui.section_pet || 'Pet');
     field(ui.language || 'Language', select(s.language, [['auto', ui.language_auto], ['en', ui.language_en], ['zhs', ui.language_zhs]], value => patch({ language: value })));
-    field(ui.size || 'Size', select(s.size, [['xs', ui.size_xs], ['s', ui.size_s], ['m', ui.size_m], ['l', ui.size_l], ['xl', ui.size_xl]], value => patch({ size: value })));
+    field(ui.size || 'Size', select(s.size, [['xs', ui.size_xs], ['s', ui.size_s], ['m', ui.size_m], ['l', ui.size_l], ['xl', ui.size_xl]], value => patch({ size: value, customSizePx: 0 })));
+    const sizeRow = make('div', 'size-row', panel);
+    make('span', '', sizeRow).textContent = ui.size_custom || 'Custom size (px)';
+    sizeSlider = document.createElement('input');
+    sizeSlider.type = 'range';
+    sizeSlider.min = '80';
+    sizeSlider.max = '500';
+    sizeSlider.step = '5';
+    sizeSlider.value = String(currentHeightPx());
+    sizePxText = make('span', 'size-px', sizeRow);
+    sizePxText.textContent = `${currentHeightPx()}px`;
+    const resetSizeBtn = make('button', 'size-reset', sizeRow);
+    resetSizeBtn.type = 'button';
+    resetSizeBtn.textContent = ui.size_reset || 'Reset';
+    sizeSlider.addEventListener('input', () => {
+      const px = clamp(Number(sizeSlider.value) || 225, 80, 500);
+      settings.customSizePx = px;
+      applySize();
+    });
+    sizeSlider.addEventListener('change', () => {
+      patch({ customSizePx: clamp(Number(sizeSlider.value) || 225, 80, 500) });
+    });
+    resetSizeBtn.addEventListener('click', () => patch({ customSizePx: 0 }));
+    sizeRow.insertBefore(sizeSlider, sizePxText);
+    make('div', 'panel-note', panel).textContent = ui.size_wheel_hint || '';
+    field(ui.desktop_mode || 'Desktop overlay mode', check(s.desktopMode, value => patch({ desktopMode: value })));
+    field(ui.desktop_electron_path || 'Electron path', textInput(s.desktopElectronPath, { placeholder: 'electron.exe', maxLength: 400, onChange: value => patch({ desktopElectronPath: value }) }));
+    desktopNote = make('div', 'panel-note', panel);
+    renderDesktopStatus();
     field(ui.animation || 'Animation', select(s.animation, [['smooth', ui.animation_smooth], ['balanced', ui.animation_balanced], ['saver', ui.animation_saver]], value => patch({ animation: value })));
     field(ui.chattiness || 'Chattiness', select(s.chattiness, [['quiet', ui.chattiness_quiet], ['normal', ui.chattiness_normal], ['chatty', ui.chattiness_chatty]], value => patch({ chattiness: value })));
     field(ui.followCursor || 'Watch the cursor', check(s.followCursor, value => patch({ followCursor: value })));
     field(ui.autoCheckUpdates, check(s.autoCheckUpdates, value => patch({ autoCheckUpdates: value })));
     field(ui.quotaHoverDelayMs || 'Quota hover delay (ms, 0 = instant)', number(s.quotaHoverDelayMs, 0, 10000, value => patch({ quotaHoverDelayMs: value })));
     field(ui.mute || 'Mute comments', check(s.muted, value => patch({ muted: value })));
+
+    section(ui.section_balance || 'Third-party balance');
+    field(ui.balance_enabled || 'Enable balance query', check(bal.enabled, value => patch({ balance: { enabled: value } })));
+    field(ui.balance_provider || 'Provider', select(bal.provider || 'auto', [
+      ['auto', ui.balance_provider_auto || 'Auto'],
+      ['deepseek', ui.balance_provider_deepseek || 'DeepSeek'],
+      ['openai_billing', ui.balance_provider_openai || 'OpenAI / OneAPI'],
+      ['custom_json', ui.balance_provider_custom || 'Custom JSON'],
+    ], value => patch({ balance: { provider: value } })));
+    field(ui.balance_label || 'Display name', textInput(bal.label, { placeholder: 'API', maxLength: 24, onChange: value => patch({ balance: { label: value } }) }));
+    field(ui.balance_baseUrl || 'Base URL', textInput(bal.baseUrl, { placeholder: 'https://api.deepseek.com', maxLength: 300, onChange: value => patch({ balance: { baseUrl: value } }) }));
+    field(ui.balance_apiKey || 'API Key', textInput(bal.apiKey, { placeholder: 'sk-...', secret: true, maxLength: 300, onChange: value => patch({ balance: { apiKey: value } }) }));
+    field(ui.balance_currency || 'Currency', textInput(bal.currency, { placeholder: '¥', maxLength: 6, onChange: value => patch({ balance: { currency: value } }) }));
+    field(ui.balance_jsonPath || 'JSON path', textInput(bal.jsonPath, { placeholder: 'data.balance', maxLength: 120, onChange: value => patch({ balance: { jsonPath: value } }) }));
+    field(ui.balance_pollIntervalMin || 'Refresh interval (min)', number(bal.pollIntervalMin ?? 15, 1, 1440, value => patch({ balance: { pollIntervalMin: value } })));
+    const testBalBtn = make('button', 'update-button', panel);
+    testBalBtn.type = 'button';
+    testBalBtn.textContent = ui.balance_test || 'Test & refresh now';
+    testBalBtn.addEventListener('click', () => openBalancePanel(true));
+
     section(ui.section_ai || 'AI comments');
     field(ui.ai_enabled || 'Use AI', check(ai.enabled, value => patch({ ai: { enabled: value } })));
     const choices = [...new Set([ai.model, ...modelChoices])].filter(Boolean).map(label => [label, label]);
@@ -402,25 +597,33 @@ HAGEMI.boot = async function boot(send, options = {}) {
       link.textContent = ui[key] || href;
     }
     panel.classList.add('show');
-    const width = panel.offsetWidth, height = panel.offsetHeight;
-    const left = x + spriteW * 0.5 + width + 10 < viewW() ? x + spriteW * 0.5 : Math.max(8, x - spriteW * 0.5 - width);
-    panel.style.transform = `translate3d(${clamp(left, 8, viewW() - width - 8)}px, ${clamp(y - height / 2, 8, Math.max(8, viewH() - height - 8))}px, 0)`;
+    placeDialog(panel);
+    syncDesktopHit();
     send({ type: 'panelOpened' });
   }
-  function closePanel() { panel.classList.remove('show'); }
+  function closePanel() { panel.classList.remove('show'); sizeSlider = null; sizePxText = null; desktopNote = null; syncDesktopHit(); }
   // Typing in the form must not reach the app's keyboard shortcuts or composer.
-  for (const type of ['keydown', 'keyup', 'keypress']) listen(panel, type, event => { event.stopPropagation(); if (event.key === 'Escape') closePanel(); });
+  for (const type of ['keydown', 'keyup', 'keypress']) {
+    listen(panel, type, event => { event.stopPropagation(); if (event.key === 'Escape') closePanel(); });
+    listen(balancePanel, type, event => { event.stopPropagation(); if (event.key === 'Escape') closeBalancePanel(); });
+  }
 
   function patch(change) {
-    settings = { ...settings, ...change, ai: { ...settings.ai, ...change.ai } };
+    settings = {
+      ...settings,
+      ...change,
+      balance: { ...settings.balance, ...change.balance },
+      ai: { ...settings.ai, ...change.ai },
+    };
     applyVisibility();
     applySize();
     send({ type: 'settings', patch: change });
   }
   function applyVisibility() {
-    const hidden = settings.hidden || (settings.hiddenUntil && Date.now() < settings.hiddenUntil);
+    const hidden = (!options.desktop && suppressed) || settings.hidden || (settings.hiddenUntil && Date.now() < settings.hiddenUntil);
     stage.style.display = hidden ? 'none' : 'block';
-    if (hidden) { closeBubble(); hideHud(); }
+    if (hidden) { closeBubble(); hideHud(); closeMenu(); closePanel(); closeBalancePanel(); }
+    syncDesktopHit();
   }
 
   // ---- Touch: pokes, pats, shakes, a short temper -----------------------------------------
@@ -477,6 +680,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     const over = rig.opaqueAt(current, artX, artY);
     const value = over ? 'auto' : 'none';
     if (hit.style.pointerEvents !== value) hit.style.pointerEvents = value;
+    syncDesktopHit(over);
   }
 
   let lastClickAt = 0, shakeFlips = 0, shakeSign = 0, shakeClock = 0;
@@ -486,6 +690,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     hit.setPointerCapture(event.pointerId);
     clearTimeout(hoverTimer);
     dragging = { id: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: event.clientX - x, offsetY: event.clientY - y, moved: false, at: performance.now(), px: event.clientX, py: event.clientY };
+    syncDesktopHit(true);
     closeBubble();
     hideHud();
   });
@@ -509,6 +714,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     if (!dragging || (event.pointerId !== undefined && event.pointerId !== dragging.id)) return;
     const now = performance.now(), wasDrag = dragging.moved, heldAt = dragging.at, startY = dragging.startY;
     dragging = null;
+    syncDesktopHit(lastOverPet);
     if (wasDrag) {
       animator.clearOverride('dragged');
       if (shakeFlips >= 4) {
@@ -537,6 +743,18 @@ HAGEMI.boot = async function boot(send, options = {}) {
   listen(hit, 'pointerup', endDrag);
   listen(hit, 'pointercancel', endDrag);
   listen(hit, 'contextmenu', event => { event.preventDefault(); openMenu(event.clientX, event.clientY); });
+  listen(hit, 'wheel', event => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    const step = event.deltaY < 0 ? 15 : -15;
+    const nextPx = clamp(Math.round((currentHeightPx() + step) / 5) * 5, 80, 500);
+    settings.customSizePx = nextPx;
+    applySize();
+    clearTimeout(sizeWheelTimer);
+    sizeWheelTimer = setTimeout(() => {
+      send({ type: 'settings', patch: { customSizePx: nextPx } });
+    }, 250);
+  }, { passive: false });
   listen(hit, 'pointerenter', () => {
     clearTimeout(hoverTimer);
     if (settings.quotaHoverDelayMs === 0) showHud();
@@ -698,28 +916,65 @@ HAGEMI.boot = async function boot(send, options = {}) {
     cancelAnimationFrame(raf);
     clearInterval(presenceTimer);
     clearTimeout(hoverTimer);
+    clearTimeout(sizeWheelTimer);
     abort.abort();
     rig.destroy();
     fx.clear();
     host.remove();
   }
 
+  function mergeSettings(incoming) {
+    if (!incoming) return;
+    settings = {
+      ...settings,
+      ...incoming,
+      balance: { ...settings.balance, ...incoming.balance },
+      ai: { ...settings.ai, ...incoming.ai },
+    };
+  }
+
   function receive(message) {
     lastMessageAt = performance.now();
     switch (message.t) {
       case 'hello':
-        settings = { ...settings, ...message.settings };
+        mergeSettings(message.settings);
         ui = message.ui || ui;
+        if (message.desktopStatus) desktopStatus = message.desktopStatus;
+        if (typeof message.suppressed === 'boolean') suppressed = message.suppressed;
         applySize();
         placeInitial();
         applyVisibility();
         break;
-      case 'settings':
-        settings = { ...settings, ...message.settings };
+      case 'settings': {
+        mergeSettings(message.settings);
         ui = message.ui || ui;
-        if (panel.classList.contains('show')) { const scroll = panel.scrollTop; openPanel(); panel.scrollTop = scroll; }
+        const active = root.activeElement;
+        const isTyping = active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && ['text', 'password', 'number'].includes(active.type)));
+        if (panel.classList.contains('show') && !isTyping) {
+          const scroll = panel.scrollTop;
+          openPanel();
+          panel.scrollTop = scroll;
+        }
         applySize();
         applyVisibility();
+        break;
+      }
+      case 'suppressed':
+        suppressed = !!message.suppressed;
+        applyVisibility();
+        break;
+      case 'desktop_status':
+        desktopStatus = message.status || desktopStatus;
+        renderDesktopStatus();
+        break;
+      case 'balance_report':
+        balanceState = {
+          loading: false,
+          rows: message.rows || [],
+          thirdParty: message.thirdParty || null,
+          updatedAt: message.updatedAt || Date.now(),
+        };
+        renderBalancePanel();
         break;
       case 'art':
         receiveArt(message.name, message.data);

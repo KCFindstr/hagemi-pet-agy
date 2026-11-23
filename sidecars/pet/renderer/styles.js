@@ -61,12 +61,35 @@ HAGEMI.css = `
 .panel-section { margin: 11px 0 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #7c5cd6; }
 .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 3px 0; }
 .field > span { flex: 1 1 auto; }
-.field select, .field input[type="number"], .field textarea {
+.field select, .field input[type="number"], .field input[type="text"], .field input[type="password"], .field textarea {
   font: inherit; color: inherit; background: #faf8ff; border: 1px solid #d9cffb; border-radius: 7px; padding: 3px 6px; max-width: 148px;
 }
+.field input[type="text"], .field input[type="password"] { width: 148px; box-sizing: border-box; }
 .field input[type="number"] { width: 70px; }
 .field input[type="checkbox"] { accent-color: #8b5cf6; width: 15px; height: 15px; }
 .field textarea { width: 148px; resize: vertical; }
+.size-row { display: flex; align-items: center; gap: 6px; padding: 2px 0 4px; }
+.size-row input[type="range"] { flex: 1 1 auto; accent-color: #8b5cf6; cursor: pointer; }
+.size-px { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11.5px; color: #5b4390; }
+.size-reset { border: 1px solid #d9cffb; border-radius: 6px; padding: 2px 7px; background: #faf8ff; color: #5b4390; font: inherit; font-size: 11px; cursor: pointer; }
+.size-reset:hover { background: #ede9fe; }
+.menu-size-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 8px; }
+.menu-mini { border: 1px solid #d9cffb; border-radius: 6px; padding: 2px 9px; background: #faf8ff; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.menu-mini:hover { background: #ede9fe; }
+.menu-size-label { font-size: 11.5px; font-variant-numeric: tabular-nums; color: #6b5b95; }
+.balance-panel {
+  position: fixed; left: 0; top: 0; width: 280px; max-height: min(72vh, 480px); overflow: auto; padding: 10px 13px 12px; display: none;
+  background: #fffdfb; color: #2a1b3d; border: 1px solid #c4b5fd; border-radius: 13px; box-shadow: 0 12px 36px rgba(46, 24, 104, 0.34);
+  font: 500 12.5px/1.35 "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif; pointer-events: auto;
+}
+.balance-panel.show { display: block; }
+.balance-list { display: grid; gap: 6px; margin: 8px 0 10px; }
+.balance-group { margin-top: 4px; font-size: 11px; font-weight: 700; color: #7c5cd6; }
+.balance-row { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.balance-row .label { color: #52407a; }
+.balance-row .meter { background: #ece6fc; }
+.balance-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.balance-meta { font-size: 11px; color: #6b5b95; }
 .panel-note { color: #6b5b95; }
 .panel-note + .panel-note { margin-top: 5px; }
 .panel-link { color: #7c3aed; margin-right: 12px; }

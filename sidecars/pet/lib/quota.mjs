@@ -107,3 +107,31 @@ export function formatDuration(ms, language = 'en') {
   const days = Math.floor(hours / 24), left = hours % 24;
   return zh ? `${days} 天${left ? ` ${left} 小时` : ''}` : `${days}d${left ? ` ${left}h` : ''}`;
 }
+
+export function formatBalanceSpeech(allBuckets = [], thirdParty = null, strings = {}, language = 'en') {
+  const zh = language === 'zhs';
+  const parts = [];
+  const groups = new Map();
+  for (const bucket of allBuckets) {
+    if (bucket.remaining == null) continue;
+    const name = bucket.group || 'Antigravity';
+    const prev = groups.get(name);
+    if (!prev || bucket.remaining < prev.remaining) {
+      groups.set(name, bucket);
+    }
+  }
+  for (const [name, bucket] of groups) {
+    const pct = `${Math.round(bucket.remaining * 100)}%`;
+    const tag = bucket.window ? `(${bucket.window})` : '';
+    parts.push(`${name}${tag} ${pct}`);
+  }
+  if (thirdParty?.ok && thirdParty.display) {
+    parts.push(`${thirdParty.label || strings.hud_balance || 'API'} ${thirdParty.display}`);
+  } else if (thirdParty && thirdParty.enabled && !thirdParty.ok && thirdParty.error) {
+    parts.push(zh ? `${thirdParty.label || 'API'} 查询失败(${thirdParty.error})` : `${thirdParty.label || 'API'} err(${thirdParty.error})`);
+  }
+  if (!parts.length) {
+    return zh ? '大号猫猫，现在还没有拿到额度或余额数据喵。' : 'No quota or balance readings yet, big cat.';
+  }
+  return zh ? `报告大号猫猫，当前余额与额度: ${parts.join(' | ')}` : `Quota and balance: ${parts.join(' | ')}`;
+}

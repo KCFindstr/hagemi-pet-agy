@@ -5,6 +5,9 @@ import { dirname } from 'node:path';
 export const DEFAULTS = Object.freeze({
   language: 'auto',
   size: 'm',
+  customSizePx: 0,
+  desktopMode: false,
+  desktopElectronPath: '',
   animation: 'balanced',
   followCursor: true,
   autoCheckUpdates: true,
@@ -15,6 +18,16 @@ export const DEFAULTS = Object.freeze({
   chattiness: 'normal',
   position: null,
   quota: Object.freeze({ lowAt: 0.25, criticalAt: 0.1, resetSoonMin: 20 }),
+  balance: Object.freeze({
+    enabled: false,
+    provider: 'auto',
+    label: 'API',
+    baseUrl: '',
+    apiKey: '',
+    currency: '¥',
+    jsonPath: '',
+    pollIntervalMin: 15,
+  }),
   ai: Object.freeze({
     enabled: true,
     model: 'Gemini 3.8 Flash (Low)',
@@ -35,6 +48,13 @@ const number = (value, low, high, fallback) => {
   return Number.isFinite(parsed) ? Math.min(high, Math.max(low, parsed)) : fallback;
 };
 const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
+const customSizePx = (value, fallback) => {
+  if (value === null || value === 0) return 0;
+  if (typeof value === 'string' && !value.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return parsed <= 0 ? 0 : Math.round(Math.min(500, Math.max(80, parsed)));
+};
 
 const SETTINGS_VERSION = 2;
 // Version 1 saved every value, defaults included, which would have pinned them forever.
@@ -61,11 +81,14 @@ function changedFrom(defaults, value) {
 }
 
 export function sanitize(input = {}, base = DEFAULTS) {
-  const quota = input.quota || {}, ai = input.ai || {};
+  const quota = input.quota || {}, balance = input.balance || {}, ai = input.ai || {};
   const position = input.position;
   return {
     language: oneOf(input.language, ['auto', 'en', 'zhs'], base.language),
     size: oneOf(input.size, ['xs', 's', 'm', 'l', 'xl'], base.size),
+    customSizePx: customSizePx(input.customSizePx, base.customSizePx),
+    desktopMode: bool(input.desktopMode, base.desktopMode),
+    desktopElectronPath: typeof input.desktopElectronPath === 'string' ? input.desktopElectronPath.trim().slice(0, 400) : base.desktopElectronPath,
     animation: oneOf(input.animation, ['smooth', 'balanced', 'saver'], base.animation),
     followCursor: bool(input.followCursor, base.followCursor),
     autoCheckUpdates: bool(input.autoCheckUpdates, base.autoCheckUpdates),
@@ -80,6 +103,16 @@ export function sanitize(input = {}, base = DEFAULTS) {
       lowAt: number(quota.lowAt, 0.01, 0.9, base.quota.lowAt),
       criticalAt: number(quota.criticalAt, 0.005, 0.5, base.quota.criticalAt),
       resetSoonMin: number(quota.resetSoonMin, 1, 180, base.quota.resetSoonMin),
+    },
+    balance: {
+      enabled: bool(balance.enabled, base.balance.enabled),
+      provider: oneOf(balance.provider, ['auto', 'deepseek', 'openai_billing', 'custom_json'], base.balance.provider),
+      label: typeof balance.label === 'string' ? (balance.label.trim().slice(0, 24) || DEFAULTS.balance.label) : base.balance.label,
+      baseUrl: typeof balance.baseUrl === 'string' ? balance.baseUrl.trim().slice(0, 300) : base.balance.baseUrl,
+      apiKey: typeof balance.apiKey === 'string' ? balance.apiKey.trim().slice(0, 300) : base.balance.apiKey,
+      currency: typeof balance.currency === 'string' ? (balance.currency.trim().slice(0, 6) || DEFAULTS.balance.currency) : base.balance.currency,
+      jsonPath: typeof balance.jsonPath === 'string' ? balance.jsonPath.trim().slice(0, 120) : base.balance.jsonPath,
+      pollIntervalMin: Math.round(number(balance.pollIntervalMin, 1, 1440, base.balance.pollIntervalMin)),
     },
     ai: {
       enabled: bool(ai.enabled, base.ai.enabled),
@@ -105,7 +138,13 @@ export class SettingsStore {
   }
 
   patch(change = {}) {
-    const merged = { ...this.value, ...change, quota: { ...this.value.quota, ...change.quota }, ai: { ...this.value.ai, ...change.ai } };
+    const merged = {
+      ...this.value,
+      ...change,
+      quota: { ...this.value.quota, ...change.quota },
+      balance: { ...this.value.balance, ...change.balance },
+      ai: { ...this.value.ai, ...change.ai },
+    };
     this.value = sanitize(merged, this.value);
     this.save();
     return this.value;
