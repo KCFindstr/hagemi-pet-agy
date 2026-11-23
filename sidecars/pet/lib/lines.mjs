@@ -532,6 +532,9 @@ export const UI = {
     desktop_status_running: "Floating on Windows desktop",
     desktop_status_missing: "Electron not found (set path or install electron)",
     desktop_status_error: "Desktop overlay failed to start",
+    pet_size: "Pet size",
+    bubble_size: "Bubble size",
+    size_default: "Default",
   },
   zhs: {
     talk: "说点什么",
@@ -656,6 +659,9 @@ export const UI = {
     desktop_status_running: "已在系统桌面置顶悬浮",
     desktop_status_missing: "未检测到 Electron（请安装或填写路径）",
     desktop_status_error: "桌面悬浮窗启动失败",
+    pet_size: "桌宠大小",
+    bubble_size: "气泡大小",
+    size_default: "默认",
   },
 };
 

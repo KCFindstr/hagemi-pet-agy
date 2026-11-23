@@ -106,8 +106,12 @@ test('customSizePx, desktopMode, and balance settings sanitize and merge cleanly
   assert.equal(store.value.balance.label, 'DeepSeek', 'nested balance fields survive partial updates');
   assert.equal(store.value.balance.pollIntervalMin, 5);
 
-  store.patch({ customSizePx: 0 });
+  store.patch({ customSizePx: 0, bubbleScale: 145 });
   assert.equal(store.value.customSizePx, 0);
+  assert.equal(store.value.bubbleScale, 145);
+  assert.equal(sanitize({ bubbleScale: 20 }).bubbleScale, 60);
+  assert.equal(sanitize({ bubbleScale: 300 }).bubbleScale, 180);
+  assert.equal(sanitize({ bubbleScale: 'bad' }).bubbleScale, 100);
   assert.equal(sanitize({ customSizePx: 'bad', desktopMode: 'yes', balance: { provider: 'unknown' } }).customSizePx, 0);
   assert.equal(sanitize({ customSizePx: 'bad', desktopMode: 'yes', balance: { provider: 'unknown' } }).desktopMode, false);
   assert.equal(sanitize({ balance: { provider: 'unknown' } }).balance.provider, 'auto');

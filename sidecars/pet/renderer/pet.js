@@ -46,7 +46,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
   const animator = HAGEMI.createAnimator(fx);
 
   let settings = {
-    language: 'en', size: 'm', customSizePx: 0, desktopMode: false, desktopElectronPath: '',
+    language: 'en', size: 'm', customSizePx: 0, bubbleScale: 100, desktopMode: false, desktopElectronPath: '',
     hidden: false, muted: false, animation: 'balanced', followCursor: true, quotaHoverDelayMs: 650, position: null,
     balance: { enabled: false, provider: 'auto', label: 'API', baseUrl: '', apiKey: '', currency: '¥', jsonPath: '', pollIntervalMin: 15 },
   };
@@ -60,7 +60,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
   let x = 0, y = 0, vx = 0, vy = 0;
   let dragging = null;
   let lastOverPet = false, lastInteractive = null;
-  let sizeSlider = null, sizePxText = null, sizeWheelTimer = 0;
+  let sizeSlider = null, sizePxText = null, bubbleSlider = null, bubbleValText = null, sizeWheelTimer = 0;
   const abort = new AbortController();
   const listen = (target, type, handler, extra = {}) => target.addEventListener(type, handler, { signal: abort.signal, ...extra });
 
@@ -143,6 +143,28 @@ HAGEMI.boot = async function boot(send, options = {}) {
     return SIZES[settings.size] || SIZES.m;
   }
 
+  function pctFromHeight(px = currentHeightPx()) {
+    return clamp(Math.round((px / SIZES.m) * 100), 40, 220);
+  }
+
+  function setRangeFill(input) {
+    if (!input) return;
+    const min = Number(input.min) || 0, max = Number(input.max) || 100, val = Number(input.value) || min;
+    const pct = clamp(((val - min) / Math.max(1, max - min)) * 100, 0, 100);
+    input.style.setProperty('--pct', `${pct}%`);
+  }
+
+  function applyBubbleScale() {
+    const pct = clamp(Math.round(Number(settings.bubbleScale) || 100), 60, 180);
+    bubble.style.setProperty('--bubble-scale', String(pct / 100));
+    if (bubbleSlider) {
+      bubbleSlider.value = String(pct);
+      setRangeFill(bubbleSlider);
+    }
+    if (bubbleValText) bubbleValText.textContent = `${pct}%`;
+    if (speech) placeBubble();
+  }
+
   function applySize() {
     const height = currentHeightPx();
     scale = height / STAGE.h;
@@ -162,8 +184,12 @@ HAGEMI.boot = async function boot(send, options = {}) {
     rig.resize(pixelW, pixelH);
     fx.resize(pixelW, pixelH);
     keepInBounds();
-    if (sizeSlider) sizeSlider.value = String(height);
-    if (sizePxText) sizePxText.textContent = `${height}px`;
+    const pct = pctFromHeight(height);
+    if (sizeSlider) {
+      sizeSlider.value = String(pct);
+      setRangeFill(sizeSlider);
+    }
+    if (sizePxText) sizePxText.textContent = `${pct}%`;
   }
 
   const viewW = () => window.innerWidth, viewH = () => window.innerHeight;
@@ -319,18 +345,19 @@ HAGEMI.boot = async function boot(send, options = {}) {
     minus.textContent = '-';
     minus.title = ui.size_smaller || 'Smaller';
     const sizeText = make('span', 'menu-size-label', sizeBar);
-    sizeText.textContent = `${currentHeightPx()}px`;
+    sizeText.textContent = `${pctFromHeight()}%`;
     const plus = make('button', 'menu-mini', sizeBar);
     plus.type = 'button';
     plus.textContent = '+';
     plus.title = ui.size_larger || 'Larger';
-    const stepSize = delta => {
-      const nextPx = clamp(Math.round((currentHeightPx() + delta) / 5) * 5, 80, 500);
-      sizeText.textContent = `${nextPx}px`;
-      patch({ customSizePx: nextPx });
+    const stepSize = deltaPct => {
+      const nextPct = clamp(Math.round((pctFromHeight() + deltaPct) / 5) * 5, 40, 220);
+      const nextPx = nextPct === 100 ? 0 : Math.round((nextPct / 100) * SIZES.m);
+      sizeText.textContent = `${nextPct}%`;
+      patch({ size: 'm', customSizePx: nextPx });
     };
-    minus.addEventListener('click', () => stepSize(-20));
-    plus.addEventListener('click', () => stepSize(20));
+    minus.addEventListener('click', () => stepSize(-10));
+    plus.addEventListener('click', () => stepSize(10));
     divider();
     item(settings.desktopMode ? (ui.desktop_mode_exit || '🪟 Return inside app') : (ui.desktop_mode_enter || '🖥️ Float on desktop'), () => patch({ desktopMode: !settings.desktopMode }), settings.desktopMode);
     item(ui.mute || 'Mute comments', () => patch({ muted: !settings.muted }), settings.muted);
@@ -508,32 +535,67 @@ HAGEMI.boot = async function boot(send, options = {}) {
       control.addEventListener('change', () => onChange(control.value));
       return control;
     };
+    const sliderBlock = ({ label, min, max, step, value, onInput, onCommit, onReset }) => {
+      const block = make('div', 'slider-block', panel);
+      const rowHead = make('div', 'slider-head', block);
+      make('span', 'slider-label', rowHead).textContent = label;
+      const valEl = make('span', 'slider-val', rowHead);
+      valEl.textContent = `${value}%`;
+      const resetBtn = make('button', 'slider-default', rowHead);
+      resetBtn.type = 'button';
+      resetBtn.textContent = ui.size_default || 'Default';
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.className = 'slider-track';
+      range.min = String(min);
+      range.max = String(max);
+      range.step = String(step);
+      range.value = String(value);
+      setRangeFill(range);
+      range.addEventListener('input', () => {
+        const nextVal = Number(range.value);
+        valEl.textContent = `${nextVal}%`;
+        setRangeFill(range);
+        onInput(nextVal);
+      });
+      range.addEventListener('change', () => onCommit(Number(range.value)));
+      resetBtn.addEventListener('click', onReset);
+      block.appendChild(range);
+      return { range, valEl };
+    };
     section(ui.section_pet || 'Pet');
     field(ui.language || 'Language', select(s.language, [['auto', ui.language_auto], ['en', ui.language_en], ['zhs', ui.language_zhs]], value => patch({ language: value })));
-    field(ui.size || 'Size', select(s.size, [['xs', ui.size_xs], ['s', ui.size_s], ['m', ui.size_m], ['l', ui.size_l], ['xl', ui.size_xl]], value => patch({ size: value, customSizePx: 0 })));
-    const sizeRow = make('div', 'size-row', panel);
-    make('span', '', sizeRow).textContent = ui.size_custom || 'Custom size (px)';
-    sizeSlider = document.createElement('input');
-    sizeSlider.type = 'range';
-    sizeSlider.min = '80';
-    sizeSlider.max = '500';
-    sizeSlider.step = '5';
-    sizeSlider.value = String(currentHeightPx());
-    sizePxText = make('span', 'size-px', sizeRow);
-    sizePxText.textContent = `${currentHeightPx()}px`;
-    const resetSizeBtn = make('button', 'size-reset', sizeRow);
-    resetSizeBtn.type = 'button';
-    resetSizeBtn.textContent = ui.size_reset || 'Reset';
-    sizeSlider.addEventListener('input', () => {
-      const px = clamp(Number(sizeSlider.value) || 225, 80, 500);
-      settings.customSizePx = px;
-      applySize();
+    const petCtrl = sliderBlock({
+      label: ui.pet_size || 'Pet size',
+      min: 40,
+      max: 220,
+      step: 5,
+      value: pctFromHeight(),
+      onInput: pct => {
+        settings.size = 'm';
+        settings.customSizePx = pct === 100 ? 0 : Math.round((pct / 100) * SIZES.m);
+        applySize();
+      },
+      onCommit: pct => patch({ size: 'm', customSizePx: pct === 100 ? 0 : Math.round((pct / 100) * SIZES.m) }),
+      onReset: () => patch({ size: 'm', customSizePx: 0 }),
     });
-    sizeSlider.addEventListener('change', () => {
-      patch({ customSizePx: clamp(Number(sizeSlider.value) || 225, 80, 500) });
+    sizeSlider = petCtrl.range;
+    sizePxText = petCtrl.valEl;
+    const bubbleCtrl = sliderBlock({
+      label: ui.bubble_size || 'Bubble size',
+      min: 60,
+      max: 180,
+      step: 5,
+      value: clamp(Math.round(Number(s.bubbleScale) || 100), 60, 180),
+      onInput: pct => {
+        settings.bubbleScale = pct;
+        applyBubbleScale();
+      },
+      onCommit: pct => patch({ bubbleScale: pct }),
+      onReset: () => patch({ bubbleScale: 100 }),
     });
-    resetSizeBtn.addEventListener('click', () => patch({ customSizePx: 0 }));
-    sizeRow.insertBefore(sizeSlider, sizePxText);
+    bubbleSlider = bubbleCtrl.range;
+    bubbleValText = bubbleCtrl.valEl;
     make('div', 'panel-note', panel).textContent = ui.size_wheel_hint || '';
     field(ui.desktop_mode || 'Desktop overlay mode', check(s.desktopMode, value => patch({ desktopMode: value })));
     field(ui.desktop_electron_path || 'Electron path', textInput(s.desktopElectronPath, { placeholder: 'electron.exe', maxLength: 400, onChange: value => patch({ desktopElectronPath: value }) }));
@@ -601,7 +663,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     syncDesktopHit();
     send({ type: 'panelOpened' });
   }
-  function closePanel() { panel.classList.remove('show'); sizeSlider = null; sizePxText = null; desktopNote = null; syncDesktopHit(); }
+  function closePanel() { panel.classList.remove('show'); sizeSlider = null; sizePxText = null; bubbleSlider = null; bubbleValText = null; desktopNote = null; syncDesktopHit(); }
   // Typing in the form must not reach the app's keyboard shortcuts or composer.
   for (const type of ['keydown', 'keyup', 'keypress']) {
     listen(panel, type, event => { event.stopPropagation(); if (event.key === 'Escape') closePanel(); });
@@ -617,6 +679,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
     };
     applyVisibility();
     applySize();
+    applyBubbleScale();
     send({ type: 'settings', patch: change });
   }
   function applyVisibility() {
@@ -942,6 +1005,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
         if (message.desktopStatus) desktopStatus = message.desktopStatus;
         if (typeof message.suppressed === 'boolean') suppressed = message.suppressed;
         applySize();
+        applyBubbleScale();
         placeInitial();
         applyVisibility();
         break;
@@ -956,6 +1020,7 @@ HAGEMI.boot = async function boot(send, options = {}) {
           panel.scrollTop = scroll;
         }
         applySize();
+        applyBubbleScale();
         applyVisibility();
         break;
       }
